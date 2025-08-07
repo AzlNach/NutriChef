@@ -216,14 +216,6 @@ const FoodAnalysisResult = ({
         </div>
       </div>
 
-      <div className="result-actions">
-        <button onClick={onConfirm} className="confirm-btn">
-          ✓ Save to Diary
-        </button>
-        <button className="analyze-again-btn">
-          🔄 Analyze Another
-        </button>
-      </div>
 
       {confidence_overall < 0.7 && (
         <div className="low-confidence-warning">

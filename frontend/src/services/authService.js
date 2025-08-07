@@ -91,6 +91,21 @@ export const authService = {
         }
     },
 
+    // Get user info from server (for profile page)
+    getUserInfo: async() => {
+        try {
+            const response = await api.get('/auth/user-info');
+            const userInfo = response.data;
+            
+            // Update localStorage with fresh user data
+            localStorage.setItem('user', JSON.stringify(userInfo.user));
+            
+            return userInfo;
+        } catch (error) {
+            throw new Error((error.response && error.response.data && error.response.data.error) || 'Failed to get user info');
+        }
+    },
+
     // Forgot password
     forgotPassword: async(email) => {
         try {
@@ -124,6 +139,16 @@ export const authService = {
             return response.data;
         } catch (error) {
             throw new Error((error.response && error.response.data && error.response.data.error) || 'Failed to change password');
+        }
+    },
+
+    // Get user info
+    getUserInfo: async() => {
+        try {
+            const response = await api.get('/users/profile');
+            return response.data;
+        } catch (error) {
+            throw new Error((error.response && error.response.data && error.response.data.error) || 'Failed to get user info');
         }
     }
 };

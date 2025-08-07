@@ -252,6 +252,95 @@ def update_profile():
         print(f"Update profile error: {e}")
         return jsonify({'error': 'Failed to update profile'}), 500
 
+@auth_bp.route('/user-info', methods=['GET'])
+@jwt_required()
+def get_user_info():
+    """Get complete user information for profile page"""
+    try:
+        user_id = int(get_jwt_identity())
+        
+        # Get database connection
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        cursor = conn.cursor(dictionary=True)
+        
+        try:
+            # Get user profile data
+            cursor.execute("""
+                SELECT 
+                    id, username, email, full_name, 
+                    date_of_birth, gender, height, weight, 
+                    activity_level, daily_calorie_goal,
+                    created_at, updated_at
+                FROM users 
+                WHERE id = %s
+            """, (user_id,))
+            
+            user = cursor.fetchone()
+            if not user:
+                return jsonify({'error': 'User not found'}), 404
+            
+            # Get user statistics
+            cursor.execute("""
+                SELECT 
+                    COUNT(*) as total_analyses,
+                    COUNT(DISTINCT DATE(created_at)) as active_days
+                FROM food_analysis_sessions 
+                WHERE user_id = %s
+            """, (user_id,))
+            
+            stats = cursor.fetchone()
+            
+            # Get recent activity
+            cursor.execute("""
+                SELECT 
+                    DATE(created_at) as date,
+                    COUNT(*) as analyses_count
+                FROM food_analysis_sessions 
+                WHERE user_id = %s 
+                    AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                GROUP BY DATE(created_at)
+                ORDER BY date DESC
+                LIMIT 10
+            """, (user_id,))
+            
+            recent_activity = cursor.fetchall()
+            
+            # Remove password-related fields and format response
+            user_info = {
+                'user': {
+                    'id': user['id'],
+                    'username': user['username'],
+                    'email': user['email'],
+                    'full_name': user['full_name'],
+                    'date_of_birth': user['date_of_birth'].isoformat() if user['date_of_birth'] else None,
+                    'gender': user['gender'],
+                    'height': user['height'],
+                    'weight': user['weight'],
+                    'activity_level': user['activity_level'],
+                    'daily_calorie_goal': user['daily_calorie_goal'],
+                    'created_at': user['created_at'].isoformat() if user['created_at'] else None,
+                    'updated_at': user['updated_at'].isoformat() if user['updated_at'] else None
+                },
+                'statistics': {
+                    'total_analyses': stats['total_analyses'] if stats else 0,
+                    'active_days': stats['active_days'] if stats else 0
+                },
+                'recent_activity': recent_activity or []
+            }
+            
+            return jsonify(user_info), 200
+            
+        finally:
+            cursor.close()
+            conn.close()
+        
+    except Exception as e:
+        print(f"Get user info error: {e}")
+        return jsonify({'error': 'Failed to get user information'}), 500
+
 @auth_bp.route('/refresh', methods=['POST'])
 @jwt_required()
 def refresh():

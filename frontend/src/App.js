@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import ImageUpload from './components/food/ImageUpload';
+import EnhancedImageUpload from './components/food/EnhancedImageUpload';
 import FoodAnalysisResult from './components/food/FoodAnalysisResult';
+import AuthGuard from './components/auth/AuthGuard';
+import ErrorNotification from './components/ui/ErrorNotification';
 import { foodService } from './services/foodService';
 import { authService } from './services/authService';
+import { userService } from './services/userService';
 import { dashboardService } from './services/dashboardService';
 import { nutritionService } from './services/nutritionService';
 
@@ -19,6 +23,9 @@ function App() {
     const [nutritionData, setNutritionData] = useState(null);
     const [userData, setUserData] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [showAuthRequired, setShowAuthRequired] = useState(false);
+    const [errorType, setErrorType] = useState('error');
+    const [showError, setShowError] = useState(false);
 
     useEffect(() => {
         // Check if user is authenticated on app load
@@ -33,8 +40,11 @@ function App() {
             setIsLoading(true);
             const overview = await dashboardService.getOverview();
             const stats = await dashboardService.getStats();
+            console.log('Dashboard Overview:', overview);
+            console.log('Dashboard Stats:', stats);
             setDashboardData({ overview, stats });
         } catch (error) {
+            console.error('Failed to load dashboard data:', error);
             setError('Failed to load dashboard data: ' + error.message);
         } finally {
             setIsLoading(false);
@@ -46,8 +56,22 @@ function App() {
             setIsLoading(true);
             const history = await nutritionService.getNutritionHistory(30);
             const dailySummary = await nutritionService.getDailySummary();
-            setNutritionData({ history, dailySummary });
+            console.log('Nutrition History Response:', history);
+            console.log('Daily Summary Response:', dailySummary);
+            
+            // FIX: Handle missing recent_analyses in history response
+            // Create structure that matches frontend expectations
+            const historyData = {
+                // Handle both possible response structures
+                recent_analyses: history.recent_analyses || history.nutrition_history || [],
+                nutrition_history: history.nutrition_history || [],
+                summary: history.summary || {},
+                user_goals: history.user_goals || {}
+            };
+            
+            setNutritionData({ history: historyData, dailySummary });
         } catch (error) {
+            console.error('Failed to load nutrition data:', error);
             setError('Failed to load nutrition data: ' + error.message);
         } finally {
             setIsLoading(false);
@@ -57,9 +81,36 @@ function App() {
     const loadUserData = async() => {
         try {
             setIsLoading(true);
-            const userInfo = await authService.getUserInfo();
-            setUserData(userInfo);
+            // Get user profile data
+            const profileResponse = await userService.getProfile();
+            console.log('Profile Response:', profileResponse);
+            
+            // FIX: Properly extract user data from response
+            const userData = profileResponse.user || profileResponse;
+            const userStats = profileResponse.stats || {};
+            const userPreferences = profileResponse.preferences || {};
+            
+            // Structure the data properly for frontend
+            setUserData({
+                // User basic info - ensure all fields are accessible
+                id: userData.id,
+                username: userData.username,
+                email: userData.email,
+                full_name: userData.full_name,
+                created_at: userData.created_at,
+                updated_at: userData.updated_at,
+                date_of_birth: userData.date_of_birth,
+                gender: userData.gender,
+                height: userData.height,
+                weight: userData.weight,
+                activity_level: userData.activity_level,
+                daily_calorie_goal: userData.daily_calorie_goal,
+                // Additional data
+                stats: userStats,
+                preferences: userPreferences
+            });
         } catch (error) {
+            console.error('Failed to load user data:', error);
             setError('Failed to load user data: ' + error.message);
         } finally {
             setIsLoading(false);
@@ -78,7 +129,61 @@ function App() {
         }
     }, [currentView, isAuthenticated, dashboardData, nutritionData, userData]);
 
+    // Authentication flow handlers
+    const handleLoginRequired = () => {
+        setShowAuthRequired(true);
+        setCurrentView('login');
+        setError('Please login to access this feature');
+        setErrorType('auth');
+        setShowError(true);
+        
+        // Auto-hide error after 5 seconds
+        setTimeout(() => {
+            setShowError(false);
+        }, 5000);
+    };
+
+    const enforceAuthentication = (targetView) => {
+        if (!isAuthenticated) {
+            handleLoginRequired();
+            return false;
+        }
+        return true;
+    };
+
+    const navigateToView = (view) => {
+        // Protected routes that require authentication
+        const protectedRoutes = ['dashboard', 'analyze', 'result', 'history', 'profile'];
+        
+        if (protectedRoutes.includes(view)) {
+            if (!enforceAuthentication(view)) {
+                return;
+            }
+        }
+        
+        setCurrentView(view);
+        setError('');
+        setShowError(false);
+        setShowAuthRequired(false);
+    };
+
+    const showErrorMessage = (message, type = 'error') => {
+        setError(message);
+        setErrorType(type);
+        setShowError(true);
+        
+        // Auto-hide error after 5 seconds
+        setTimeout(() => {
+            setShowError(false);
+        }, 5000);
+    };
+
     const handleImageUpload = async(file) => {
+        // Check authentication first
+        if (!enforceAuthentication('analyze')) {
+            return;
+        }
+        
         // Store the uploaded image for preview only
         if (file) {
             const imageUrl = URL.createObjectURL(file);
@@ -88,6 +193,11 @@ function App() {
     };
 
     const handleAnalyzeFood = async(formData) => {
+        // Double-check authentication before analysis
+        if (!enforceAuthentication('analyze')) {
+            return;
+        }
+        
         setIsAnalyzing(true);
         setError('');
 
@@ -95,8 +205,40 @@ function App() {
             console.log('🔍 Starting Gemini AI Analysis...');
             const result = await foodService.analyzeFood(formData);
             console.log('✅ Analysis completed:', result);
-            setAnalysisResult(result);
-            setCurrentView('result');
+            console.log('Analysis Result Structure:', JSON.stringify(result, null, 2));
+            
+            // FIX: Handle analysis result structure properly
+            let analysisData = null;
+            
+            if (result.analysis_result) {
+                // Backend returns result.analysis_result structure
+                analysisData = result.analysis_result;
+            } else if (result.detected_foods) {
+                // Direct structure
+                analysisData = result;
+            } else {
+                // Fallback structure
+                analysisData = {
+                    detected_foods: result.foods || [],
+                    total_nutrition: result.nutrition || {},
+                    confidence_overall: result.confidence || 0,
+                    session_id: result.session_id
+                };
+            }
+            
+            // Ensure data structure is complete
+            const completeAnalysisResult = {
+                session_id: analysisData.session_id || result.session_id,
+                detected_foods: analysisData.detected_foods || [],
+                total_nutrition: analysisData.total_nutrition || {},
+                confidence_overall: analysisData.confidence_overall || analysisData.confidence || 0,
+                status: 'completed',
+                ...analysisData
+            };
+            
+            console.log('🔍 Processed Analysis Result:', completeAnalysisResult);
+            setAnalysisResult(completeAnalysisResult);
+            navigateToView('result');
         } catch (error) {
             setError('Analysis failed: ' + error.message);
             console.error('❌ Analysis error:', error);
@@ -228,7 +370,7 @@ function App() {
                     <nav className="nav-section">
                         <button 
                             className={`nav-button ${currentView === 'home' ? 'active' : ''}`}
-                            onClick={() => setCurrentView('home')}
+                            onClick={() => navigateToView('home')}
                         >
                             <span className="nav-icon">🏠</span>
                             Home
@@ -238,15 +380,23 @@ function App() {
                             <>
                                 <button 
                                     className={`nav-button ${currentView === 'dashboard' ? 'active' : ''}`}
-                                    onClick={() => setCurrentView('dashboard')}
+                                    onClick={() => navigateToView('dashboard')}
                                 >
                                     <span className="nav-icon">📊</span>
                                     Dashboard
                                 </button>
 
                                 <button 
+                                    className={`nav-button ${currentView === 'analyze' ? 'active' : ''}`}
+                                    onClick={() => navigateToView('analyze')}
+                                >
+                                    <span className="nav-icon">🔍</span>
+                                    Analyze Food
+                                </button>
+
+                                <button 
                                     className={`nav-button ${currentView === 'history' ? 'active' : ''}`}
-                                    onClick={() => setCurrentView('history')}
+                                    onClick={() => navigateToView('history')}
                                 >
                                     <span className="nav-icon">📋</span>
                                     History
@@ -254,7 +404,7 @@ function App() {
 
                                 <button 
                                     className={`nav-button ${currentView === 'profile' ? 'active' : ''}`}
-                                    onClick={() => setCurrentView('profile')}
+                                    onClick={() => navigateToView('profile')}
                                 >
                                     <span className="nav-icon">👤</span>
                                     Profile
@@ -318,13 +468,6 @@ function App() {
                                 </p>
                             </div>
 
-                            <div className="upload-section">
-                                <ImageUpload 
-                                    onImageUpload={handleImageUpload}
-                                    onAnalyze={handleAnalyzeFood}
-                                    isAnalyzing={isAnalyzing}
-                                />
-                            </div>
 
                             {/* Features Section */}
                             <div className="features-section">
@@ -350,46 +493,15 @@ function App() {
                         </div>
                     )}
 
-                    {/* Analyze View */}
-                    {currentView === 'analyze' && uploadedImage && (
+                    {/* Enhanced Analyze View */}
+                    {currentView === 'analyze' && (
                         <div className="analyze-view">
-                            <div className="analyze-header">
-                                <h2 className="analyze-title">Ready to Analyze</h2>
-                                <p className="analyze-subtitle">Your image has been uploaded successfully</p>
-                            </div>
-
-                            <div className="image-preview-section">
-                                <div className="image-preview">
-                                    <img 
-                                        src={uploadedImage}
-                                        alt="Uploaded food"
-                                        className="preview-image"
-                                    />
-                                </div>
-
-                                <div className="analyze-actions">
-                                    <button 
-                                        className="action-button secondary"
-                                        onClick={handleNewAnalysis}
-                                    >
-                                        Upload Different Image
-                                    </button>
-                                    <button 
-                                        className="action-button primary analyze-btn"
-                                        onClick={handleAnalyzeImage}
-                                        disabled={isAnalyzing}
-                                    >
-                                        {isAnalyzing ? (
-                                            <>
-                                                <span className="loading-spinner"></span>
-                                                Analyzing...
-                                            </>
-                                        ) : (
-                                            <>🔍 Analyze Food</>
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
+                            <EnhancedImageUpload
+                                onImageUpload={handleImageUpload}
+                                onAnalyze={handleAnalyzeFood}
+                                isAnalyzing={isAnalyzing}
+                                onLoginRequired={handleLoginRequired}
+                            />
                         </div>
                     )}
 
@@ -405,19 +517,11 @@ function App() {
                                     >
                                         New Analysis
                                     </button>
-                                    {isAuthenticated && (
-                                        <button 
-                                            className="action-button primary"
-                                            onClick={handleConfirmAnalysis}
-                                        >
-                                            Save to Diary
-                                        </button>
-                                    )}
                                 </div>
                             </div>
 
                             <FoodAnalysisResult 
-                                result={analysisResult}
+                                analysisResult={analysisResult}
                                 onEditFood={handleEditFood}
                                 onRemoveFood={handleRemoveFood}
                                 onConfirm={handleConfirmAnalysis}
@@ -628,42 +732,48 @@ function App() {
                                         </div>
                                     </div>
 
-                                    {/* Recent Analyses */}
+                                    {/* Today's Summary - Moved from History */}
                                     <div className="dashboard-section">
-                                        <h3>Recent Food Analyses</h3>
-                                        {dashboardData.overview.recent_analyses?.length > 0 ? (
-                                            <div className="recent-analyses">
-                                                {dashboardData.overview.recent_analyses.map((analysis) => (
-                                                    <div key={analysis.id} className="analysis-item">
-                                                        <div className="analysis-info">
-                                                            <div className="analysis-filename">
-                                                                📷 {analysis.image_filename || 'Food Analysis'}
-                                                            </div>
-                                                            <div className="analysis-calories">
-                                                                {Math.round(analysis.total_estimated_calories || 0)} calories
-                                                            </div>
-                                                            <div className="analysis-date">
-                                                                {new Date(analysis.created_at).toLocaleDateString()}
-                                                            </div>
-                                                            <div className="analysis-confidence">
-                                                                {Math.round((analysis.confidence_score || 0) * 100)}% confidence
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                        <h3>Today's Summary</h3>
+                                        {dashboardData.overview.today_nutrition ? (
+                                            <div className="summary-cards">
+                                                <div className="summary-item">
+                                                    <span className="summary-label">Calories:</span>
+                                                    <span className="summary-value">
+                                                        {Math.round(dashboardData.overview.today_nutrition.calories || 0)}
+                                                    </span>
+                                                </div>
+                                                <div className="summary-item">
+                                                    <span className="summary-label">Protein:</span>
+                                                    <span className="summary-value">
+                                                        {Math.round(dashboardData.overview.today_nutrition.protein || 0)}g
+                                                    </span>
+                                                </div>
+                                                <div className="summary-item">
+                                                    <span className="summary-label">Carbs:</span>
+                                                    <span className="summary-value">
+                                                        {Math.round(dashboardData.overview.today_nutrition.carbs || 0)}g
+                                                    </span>
+                                                </div>
+                                                <div className="summary-item">
+                                                    <span className="summary-label">Fat:</span>
+                                                    <span className="summary-value">
+                                                        {Math.round(dashboardData.overview.today_nutrition.fat || 0)}g
+                                                    </span>
+                                                </div>
                                             </div>
                                         ) : (
                                             <div className="empty-state">
-                                                <div className="empty-icon">📷</div>
-                                                <p>No food analyses yet</p>
-                                                <p>Upload your first food photo to get started!</p>
+                                                <div className="empty-icon">�</div>
+                                                <p>No nutrition data for today</p>
+                                                <p>Start analyzing food to see your daily summary!</p>
                                             </div>
                                         )}
                                     </div>
 
                                     {/* Weekly Stats */}
                                     <div className="dashboard-section">
-                                        <h3>Weekly Stats</h3>
+                                        <h3>Summary Statistics</h3>
                                         <div className="stats-grid">
                                             <div className="stat-card">
                                                 <div className="stat-label">Weekly Average</div>
@@ -714,42 +824,87 @@ function App() {
                                 </div>
                             ) : nutritionData ? (
                                 <div className="history-content">
-                                    {/* Daily Summary */}
-                                    {nutritionData.dailySummary && (
-                                        <div className="daily-summary">
-                                            <h3>Today's Summary</h3>
-                                            <div className="summary-cards">
-                                                <div className="summary-item">
-                                                    <span className="summary-label">Calories:</span>
-                                                    <span className="summary-value">
-                                                        {Math.round(nutritionData.dailySummary.daily_summary?.total_calories || 0)}
-                                                    </span>
+                                    {/* Recent Food Analyses - Moved from Dashboard */}
+                                    <div className="history-section">
+                                        <h3>Recent Food Analyses</h3>
+                                        {(
+                                            // FIX: Handle multiple possible data structures
+                                            nutritionData.history?.recent_analyses?.length > 0 || 
+                                            nutritionData.history?.nutrition_history?.length > 0 ||
+                                            (Array.isArray(nutritionData.history) && nutritionData.history.length > 0)
+                                        ) ? (
+                                            <div className="recent-analyses-table">
+                                                <div className="table-header">
+                                                    <div className="header-cell">Food Name</div>
+                                                    <div className="header-cell">Ingredients</div>
+                                                    <div className="header-cell">Total Calories</div>
+                                                    <div className="header-cell">Actions</div>
                                                 </div>
-                                                <div className="summary-item">
-                                                    <span className="summary-label">Protein:</span>
-                                                    <span className="summary-value">
-                                                        {Math.round(nutritionData.dailySummary.daily_summary?.total_protein || 0)}g
-                                                    </span>
-                                                </div>
-                                                <div className="summary-item">
-                                                    <span className="summary-label">Carbs:</span>
-                                                    <span className="summary-value">
-                                                        {Math.round(nutritionData.dailySummary.daily_summary?.total_carbs || 0)}g
-                                                    </span>
-                                                </div>
-                                                <div className="summary-item">
-                                                    <span className="summary-label">Fat:</span>
-                                                    <span className="summary-value">
-                                                        {Math.round(nutritionData.dailySummary.daily_summary?.total_fat || 0)}g
-                                                    </span>
-                                                </div>
+                                                {(
+                                                    // FIX: Use the correct data source
+                                                    nutritionData.history?.recent_analyses || 
+                                                    nutritionData.history?.nutrition_history || 
+                                                    (Array.isArray(nutritionData.history) ? nutritionData.history : [])
+                                                ).map((analysis, index) => (
+                                                    <div key={analysis.id || index} className="table-row">
+                                                        <div className="table-cell">
+                                                            {/* FIX: Handle different food name structures */}
+                                                            {analysis.detected_foods?.map(food => food.name).join(', ') || 
+                                                             analysis.food_names?.join(', ') ||
+                                                             analysis.food_name || 
+                                                             'Unknown Food'}
+                                                        </div>
+                                                        <div className="table-cell">
+                                                            {analysis.detected_foods?.length || 
+                                                             analysis.ingredients?.length || 
+                                                             analysis.ingredient_count || 0} items
+                                                        </div>
+                                                        <div className="table-cell">
+                                                            {Math.round(
+                                                                analysis.total_nutrition?.calories ||
+                                                                analysis.total_estimated_calories || 
+                                                                analysis.total_calories || 
+                                                                analysis.calories || 0
+                                                            )} cal
+                                                        </div>
+                                                        <div className="table-cell">
+                                                            <button 
+                                                                className="view-analysis-btn"
+                                                                onClick={() => {
+                                                                    // FIX: Create proper analysis result structure
+                                                                    const analysisResult = {
+                                                                        detected_foods: analysis.detected_foods || [],
+                                                                        total_nutrition: analysis.total_nutrition || {
+                                                                            calories: analysis.total_calories || analysis.calories || 0,
+                                                                            protein: analysis.total_protein || analysis.protein || 0,
+                                                                            carbs: analysis.total_carbs || analysis.carbs || 0,
+                                                                            fat: analysis.total_fat || analysis.fat || 0
+                                                                        },
+                                                                        confidence_overall: analysis.confidence_overall || analysis.confidence || 0.8,
+                                                                        session_id: analysis.session_id || analysis.id
+                                                                    };
+                                                                    setAnalysisResult(analysisResult);
+                                                                    setCurrentView('result');
+                                                                }}
+                                                            >
+                                                                View Analysis
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
-                                        </div>
-                                    )}
+                                        ) : (
+                                            <div className="empty-state">
+                                                <div className="empty-icon">📷</div>
+                                                <p>No food analyses yet</p>
+                                                <p>Start analyzing food to see your analysis history!</p>
+                                            </div>
+                                        )}
+                                    </div>
 
                                     {/* Nutrition History */}
                                     <div className="history-section">
-                                        <h3>Last 30 Days</h3>
+                                        <h3>Daily Nutrition History (Last 30 Days)</h3>
                                         {nutritionData.history?.nutrition_history?.length > 0 ? (
                                             <div className="history-list">
                                                 {nutritionData.history.nutrition_history.map((entry, index) => (
@@ -854,26 +1009,55 @@ function App() {
                                         <h3>Account Information</h3>
                                         <div className="info-group">
                                             <label>Username:</label>
-                                            <span>{userData.username}</span>
+                                            <span>{userData.username || 'Not available'}</span>
                                         </div>
                                         <div className="info-group">
                                             <label>Email:</label>
-                                            <span>{userData.email}</span>
+                                            <span>{userData.email || 'Not available'}</span>
+                                        </div>
+                                        <div className="info-group">
+                                            <label>Full Name:</label>
+                                            <span>{userData.full_name || 'Not provided'}</span>
                                         </div>
                                         <div className="info-group">
                                             <label>Member since:</label>
-                                            <span>{new Date(userData.created_at).toLocaleDateString()}</span>
+                                            <span>{userData.created_at ? new Date(userData.created_at).toLocaleDateString() : 'Not available'}</span>
                                         </div>
+                                        {userData.stats && (
+                                            <div className="info-group">
+                                                <label>Total Analyses:</label>
+                                                <span>{userData.stats.total_analyses || 0}</span>
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {userData.preferences && (
+                                    {userData.preferences && Object.keys(userData.preferences).length > 0 && (
                                         <div className="user-preferences">
                                             <h3>Preferences</h3>
                                             <div className="preferences-list">
                                                 {Object.entries(userData.preferences).map(([key, value]) => (
                                                     <div key={key} className="preference-item">
-                                                        <label>{key}:</label>
-                                                        <span>{value}</span>
+                                                        <label>{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</label>
+                                                        <span>
+                                                            {(() => {
+                                                                // FIX: Properly format different value types for display
+                                                                if (typeof value === 'boolean') {
+                                                                    return value ? 'Yes' : 'No';
+                                                                } else if (typeof value === 'object' && value !== null) {
+                                                                    // Handle nested objects without causing React error
+                                                                    if (Array.isArray(value)) {
+                                                                        return value.join(', ');
+                                                                    } else {
+                                                                        // Convert object to user-friendly display
+                                                                        return Object.entries(value)
+                                                                            .map(([k, v]) => `${k}: ${v}`)
+                                                                            .join(', ');
+                                                                    }
+                                                                } else {
+                                                                    return String(value);
+                                                                }
+                                                            })()}
+                                                        </span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -920,6 +1104,14 @@ function App() {
                     <p>&copy; 2025 FoodVision. All rights reserved.</p>
                 </div>
             </footer>
+
+            {/* Error Notification */}
+            <ErrorNotification
+                message={error}
+                type={errorType}
+                isVisible={showError}
+                onClose={() => setShowError(false)}
+            />
         </div>
     );
 }

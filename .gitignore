@@ -63,3 +63,4 @@ ehthumbs.db
 frontend/node_modules/
 frontend/.cache/
 
+uploads/

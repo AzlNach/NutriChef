@@ -47,15 +47,6 @@ export const foodService = {
         }
     },
 
-    // Confirm analysis and save to diary
-    confirmAnalysis: async(sessionId) => {
-        try {
-            const response = await api.post(`/food/session/${sessionId}/confirm`);
-            return response.data;
-        } catch (error) {
-            throw new Error((error.response && error.response.data && error.response.data.error) || 'Failed to confirm analysis');
-        }
-    },
 
     // Search foods in database
     searchFoods: async(query, limit = 20) => {
