@@ -1,0 +1,270 @@
+/* Custom Button Styles */
+.btn-custom {
+  color: #090909;
+  padding: 0.7em 1.7em;
+  font-size: 18px;
+  border-radius: 0.5em;
+  background: #e8e8e8;
+  cursor: pointer;
+  border: 1px solid #e8e8e8;
+  transition: all 0.3s;
+  box-shadow: 6px 6px 12px #c5c5c5, -6px -6px 12px #ffffff;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-custom:active {
+  color: #666;
+  box-shadow: inset 4px 4px 12px #c5c5c5, inset -4px -4px 12px #ffffff;
+}
+
+.btn-custom:hover {
+  background: #f0f0f0;
+  transform: translateY(-1px);
+}
+
+/* Loading Animation */
+.typing-indicator {
+  width: 60px;
+  height: 30px;
+  position: relative;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.typing-circle {
+  width: 8px;
+  height: 8px;
+  position: absolute;
+  border-radius: 50%;
+  background-color: #000;
+  left: 15%;
+  transform-origin: 50%;
+  animation: typing-circle7124 0.5s alternate infinite ease;
+}
+
+@keyframes typing-circle7124 {
+  0% {
+    top: 20px;
+    height: 5px;
+    border-radius: 50px 50px 25px 25px;
+    transform: scaleX(1.7);
+  }
+
+  40% {
+    height: 8px;
+    border-radius: 50%;
+    transform: scaleX(1);
+  }
+
+  100% {
+    top: 0%;
+  }
+}
+
+.typing-circle:nth-child(2) {
+  left: 45%;
+  animation-delay: 0.2s;
+}
+
+.typing-circle:nth-child(3) {
+  left: auto;
+  right: 15%;
+  animation-delay: 0.3s;
+}
+
+.typing-shadow {
+  width: 5px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.2);
+  position: absolute;
+  top: 30px;
+  transform-origin: 50%;
+  z-index: 3;
+  left: 15%;
+  filter: blur(1px);
+  animation: typing-shadow046 0.5s alternate infinite ease;
+}
+
+@keyframes typing-shadow046 {
+  0% {
+    transform: scaleX(1.5);
+  }
+
+  40% {
+    transform: scaleX(1);
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: scaleX(0.2);
+    opacity: 0.4;
+  }
+}
+
+.typing-shadow:nth-child(4) {
+  left: 45%;
+  animation-delay: 0.2s;
+}
+
+.typing-shadow:nth-child(5) {
+  left: auto;
+  right: 15%;
+  animation-delay: 0.3s;
+}
+
+/* Glass Effects */
+.glass-effect {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+/* Card Hover Effects */
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Animation Classes */
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.6s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.6s ease-out;
+}
+
+.animate-slide-left {
+  animation: slideLeft 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Delay Classes */
+.animate-delay-200 {
+  animation-delay: 0.2s;
+  animation-fill-mode: both;
+}
+
+.animate-delay-400 {
+  animation-delay: 0.4s;
+  animation-fill-mode: both;
+}
+
+.animate-delay-600 {
+  animation-delay: 0.6s;
+  animation-fill-mode: both;
+}
+
+.animate-delay-800 {
+  animation-delay: 0.8s;
+  animation-fill-mode: both;
+}
+
+.animate-delay-1000 {
+  animation-delay: 1s;
+  animation-fill-mode: both;
+}
+
+.animate-delay-1200 {
+  animation-delay: 1.2s;
+  animation-fill-mode: both;
+}
+
+/* Pagination Styles */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 2rem;
+}
+
+.pagination-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #6b7280;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.pagination-btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.pagination-btn.active {
+  background: #111827;
+  color: white;
+  border-color: #111827;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-btn:disabled:hover {
+  background: white;
+  border-color: #e5e7eb;
+}

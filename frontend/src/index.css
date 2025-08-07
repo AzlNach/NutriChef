@@ -1,3 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom button styles */
+@layer components {
+  .btn-custom {
+    @apply text-gray-900 py-3 px-7 text-lg rounded-lg bg-gray-200 cursor-pointer border border-gray-200 transition-all duration-300;
+    box-shadow: 6px 6px 12px #c5c5c5, -6px -6px 12px #ffffff;
+  }
+
+  .btn-custom:active {
+    @apply text-gray-600;
+    box-shadow: inset 4px 4px 12px #c5c5c5, inset -4px -4px 12px #ffffff;
+  }
+
+  /* Loading animation */
+  .typing-indicator {
+    width: 60px;
+    height: 30px;
+    position: relative;
+    z-index: 4;
+  }
+
+  .typing-circle {
+    width: 8px;
+    height: 8px;
+    position: absolute;
+    border-radius: 50%;
+    background-color: #000;
+    left: 15%;
+    transform-origin: 50%;
+    animation: typing-circle7124 0.5s alternate infinite ease;
+  }
+
+  @keyframes typing-circle7124 {
+    0% {
+      top: 20px;
+      height: 5px;
+      border-radius: 50px 50px 25px 25px;
+      transform: scaleX(1.7);
+    }
+    40% {
+      height: 8px;
+      border-radius: 50%;
+      transform: scaleX(1);
+    }
+    100% {
+      top: 0%;
+    }
+  }
+
+  .typing-circle:nth-child(2) {
+    left: 45%;
+    animation-delay: 0.2s;
+  }
+
+  .typing-circle:nth-child(3) {
+    left: auto;
+    right: 15%;
+    animation-delay: 0.3s;
+  }
+
+  .typing-shadow {
+    width: 5px;
+    height: 4px;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.2);
+    position: absolute;
+    top: 30px;
+    transform-origin: 50%;
+    z-index: 3;
+    left: 15%;
+    filter: blur(1px);
+    animation: typing-shadow046 0.5s alternate infinite ease;
+  }
+
+  @keyframes typing-shadow046 {
+    0% {
+      transform: scaleX(1.5);
+    }
+    40% {
+      transform: scaleX(1);
+      opacity: 0.7;
+    }
+    100% {
+      transform: scaleX(0.2);
+      opacity: 0.4;
+    }
+  }
+
+  .typing-shadow:nth-child(4) {
+    left: 45%;
+    animation-delay: 0.2s;
+  }
+
+  .typing-shadow:nth-child(5) {
+    left: auto;
+    right: 15%;
+    animation-delay: 0.3s;
+  }
+
+  /* Glass effect */
+  .glass-effect {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -5,6 +115,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #ffffff;
 }
 
 code {
