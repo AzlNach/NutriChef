@@ -1,0 +1,396 @@
+.analysis-result-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.analysis-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.analysis-header h2 {
+    margin: 0 0 16px 0;
+    font-size: 24px;
+}
+
+.overall-confidence {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.confidence-label {
+    font-weight: 600;
+    min-width: 140px;
+}
+
+.confidence-bar {
+    flex: 1;
+    height: 24px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+}
+
+.confidence-fill {
+    height: 100%;
+    background-color: var(--confidence-color);
+    transition: width 0.3s ease;
+    border-radius: 12px;
+}
+
+.confidence-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.detected-foods h3 {
+    color: #333;
+    margin-bottom: 16px;
+    font-size: 20px;
+}
+
+.food-item {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.food-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.food-info {
+    flex: 1;
+}
+
+.food-display h4 {
+    margin: 0 0 4px 0;
+    color: #333;
+    font-size: 18px;
+}
+
+.food-portion {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.food-category {
+    color: #888;
+    font-style: italic;
+}
+
+.edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.food-name-input {
+    padding: 8px 12px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.portion-inputs {
+    display: flex;
+    gap: 8px;
+}
+
+.portion-input {
+    padding: 8px 12px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    width: 120px;
+}
+
+.unit-select {
+    padding: 8px 12px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+}
+
+.edit-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.save-btn,
+.cancel-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.save-btn {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.save-btn:hover {
+    background-color: #45a049;
+}
+
+.cancel-btn {
+    background-color: #f44336;
+    color: white;
+}
+
+.cancel-btn:hover {
+    background-color: #da190b;
+}
+
+.food-confidence {
+    margin-left: 12px;
+}
+
+.confidence-badge {
+    background-color: #4CAF50;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.food-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: 12px;
+}
+
+.edit-btn,
+.remove-btn {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.edit-btn:hover {
+    background-color: #f0f0f0;
+}
+
+.remove-btn:hover {
+    background-color: #ffebee;
+}
+
+.nutrition-info {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 8px;
+}
+
+.nutrition-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 12px;
+}
+
+.nutrition-item {
+    text-align: center;
+}
+
+.nutrition-label {
+    display: block;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 2px;
+}
+
+.nutrition-value {
+    display: block;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+.food-notes {
+    margin-top: 8px;
+    padding: 8px;
+    background-color: #fff3cd;
+    border-radius: 6px;
+    color: #856404;
+}
+
+.nutrition-summary {
+    background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+    margin: 20px 0;
+}
+
+.nutrition-summary h3 {
+    margin: 0 0 16px 0;
+    font-size: 20px;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+}
+
+.summary-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 12px;
+    border-radius: 8px;
+}
+
+.summary-icon {
+    font-size: 24px;
+}
+
+.summary-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.summary-label {
+    font-size: 12px;
+    opacity: 0.9;
+    margin-bottom: 2px;
+}
+
+.summary-value {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.result-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.confirm-btn,
+.analyze-again-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.confirm-btn {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.confirm-btn:hover {
+    background-color: #45a049;
+    transform: translateY(-1px);
+}
+
+.analyze-again-btn {
+    background-color: #2196F3;
+    color: white;
+}
+
+.analyze-again-btn:hover {
+    background-color: #1976D2;
+    transform: translateY(-1px);
+}
+
+.low-confidence-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 20px;
+}
+
+.warning-icon {
+    font-size: 20px;
+    color: #856404;
+}
+
+.warning-content {
+    color: #856404;
+}
+
+.warning-content p {
+    margin: 0 0 8px 0;
+}
+
+.warning-content p:last-child {
+    margin-bottom: 0;
+}
+
+.no-result {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+
+/* Responsive design */
+
+@media (max-width: 768px) {
+    .analysis-result-container {
+        padding: 16px;
+    }
+    .food-header {
+        flex-direction: column;
+        gap: 12px;
+    }
+    .food-actions {
+        margin-left: 0;
+        justify-content: flex-end;
+    }
+    .nutrition-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .result-actions {
+        flex-direction: column;
+    }
+    .portion-inputs {
+        flex-direction: column;
+    }
+    .portion-input {
+        width: 100%;
+    }
+}
