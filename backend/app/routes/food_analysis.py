@@ -250,52 +250,15 @@ def analyze_food():
                     main_food_id = cursor.lastrowid
                     print(f"     ✅ Created new main food with ID: {main_food_id}")
             
-            # FIX 5: Save ingredients to detected_ingredients with proper categories
+            # FIX 5: CORRECTED - Save ingredients ONLY to detected_ingredients (NOT to foods table)
+            # Ingredients should reference the main food_id, not create individual food entries
             detected_foods_response = []
             
             for ingredient in enriched_ingredients:
-                # Create or find ingredient food entry first
-                ingredient_food_id = None
                 ingredient_name = ingredient.get('name')
                 
-                cursor.execute("SELECT id FROM foods WHERE name = %s", (ingredient_name,))
-                existing_ingredient_food = cursor.fetchone()
-                
-                if existing_ingredient_food:
-                    ingredient_food_id = existing_ingredient_food['id']
-                else:
-                    # Create new food entry for ingredient
-                    ingredient_food_query = """
-                    INSERT INTO foods (name, category_id, serving_size, serving_unit,
-                                     calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g,
-                                     fiber_per_100g, sugar_per_100g, sodium_per_100g, gemini_source, created_at, updated_at)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """
-                    
-                    # Get nutrition per 100g for this ingredient
-                    portion_grams = ingredient.get('estimated_portion', 100)
-                    per_100g_multiplier = 100.0 / portion_grams
-                    nutrition = ingredient.get('nutrition', {})
-                    
-                    cursor.execute(ingredient_food_query, (
-                        ingredient_name,
-                        None,  # category_id
-                        100,   # default serving size
-                        'grams',
-                        Decimal(str(nutrition.get('calories', 0) * per_100g_multiplier)),
-                        Decimal(str(nutrition.get('protein', 0) * per_100g_multiplier)),
-                        Decimal(str(nutrition.get('carbs', 0) * per_100g_multiplier)),
-                        Decimal(str(nutrition.get('fat', 0) * per_100g_multiplier)),
-                        Decimal(str(nutrition.get('fiber', 0) * per_100g_multiplier)),
-                        Decimal(str(nutrition.get('sugar', 0) * per_100g_multiplier)),
-                        Decimal(str(nutrition.get('sodium', 0) * per_100g_multiplier)),
-                        True,  # gemini_source
-                        datetime.now(),
-                        datetime.now()
-                    ))
-                    ingredient_food_id = cursor.lastrowid
-                
-                # Insert detected ingredient with PRESERVED category
+                # FIX: All ingredients reference the MAIN FOOD ID, not individual food entries
+                # This eliminates redundancy - ingredients are NOT foods, they are components of the main food
                 detected_ingredient_query = """
                 INSERT INTO detected_ingredients (
                     session_id, food_id, ingredient_name, ingredient_category, estimated_portion, portion_unit, 
@@ -308,9 +271,9 @@ def analyze_food():
                 
                 cursor.execute(detected_ingredient_query, (
                     session_id,
-                    ingredient_food_id,
+                    main_food_id,  # FIX: ALL ingredients reference the main food, not individual entries
                     ingredient_name,
-                    ingredient.get('category'),  # FIX: Store original category from Gemini
+                    ingredient.get('category'),  # Preserve original category from Gemini
                     Decimal(str(ingredient.get('estimated_portion', 100))),
                     ingredient.get('portion_unit', 'grams'),
                     Decimal(str(ingredient.get('estimated_portion', 100))),  # estimated_weight_grams
@@ -329,9 +292,9 @@ def analyze_food():
                 
                 detected_foods_response.append({
                     'id': detected_ingredient_id,
-                    'food_id': ingredient_food_id,
+                    'food_id': main_food_id,  # FIX: Reference main food ID
                     'name': ingredient_name,
-                    'category': ingredient.get('category'),  # FIX: Preserve category
+                    'category': ingredient.get('category'),
                     'portion': ingredient.get('estimated_portion'),
                     'unit': ingredient.get('portion_unit', 'grams'),
                     'confidence': ingredient.get('confidence'),
@@ -339,7 +302,7 @@ def analyze_food():
                     'data_source': ingredient.get('data_source')
                 })
             
-            print(f"✅ FIX 5: Saved {len(detected_foods_response)} ingredients with categories")
+            print(f"✅ FIX 5: Saved {len(detected_foods_response)} ingredients referencing main food ID {main_food_id}")
             
             # FIX 6: Update user preferences with detected foods
             try:
@@ -482,19 +445,46 @@ def analyze_food():
                 ))
                 print(f"✅ FIX 7: Created daily nutrition summary")
             
+            # FIX 8: Save to user_meals table - MISSING from previous code
+            # Get meal_type_id based on meal_type string
+            cursor.execute("SELECT id FROM meal_types WHERE name = %s", (meal_type.capitalize(),))
+            meal_type_record = cursor.fetchone()
+            meal_type_id = meal_type_record['id'] if meal_type_record else 2  # Default to lunch if not found
+            
+            # Insert into user_meals
+            user_meal_query = """
+            INSERT INTO user_meals (user_id, session_id, meal_type_id, meal_date, meal_time, notes, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """
+            
+            cursor.execute(user_meal_query, (
+                user_id,
+                session_id,
+                meal_type_id,
+                today,
+                datetime.now(),
+                notes,
+                datetime.now()
+            ))
+            user_meal_id = cursor.lastrowid
+            
+            print(f"✅ FIX 8: Saved to user_meals table with ID {user_meal_id}")
+            
             conn.commit()
             
             print(f"🎉 ALL FIXES APPLIED SUCCESSFULLY!")
             print(f"   Session ID: {session_id}")
+            print(f"   User Meal ID: {user_meal_id}")
             print(f"   Confidence: {actual_confidence}")
-            print(f"   Main Food ID: {main_food_id}")
-            print(f"   Ingredients: {len(detected_foods_response)}")
+            print(f"   Main Food ID: {main_food_id} ('{main_food.get('name')}')")
+            print(f"   Ingredients: {len(detected_foods_response)} (all referencing main food)")
             print(f"   Total Nutrition: {total_nutrition}")
             
-            # Return complete response
+            # Return complete response with corrected structure
             return jsonify({
                 'success': True,
                 'session_id': session_id,
+                'user_meal_id': user_meal_id,
                 'analysis_result': {
                     'session_id': session_id,
                     'status': 'completed',
@@ -510,14 +500,23 @@ def analyze_food():
                     'image_quality': analysis_result.get('image_quality', 'good'),
                     'additional_notes': analysis_result.get('additional_notes', ''),
                     'meal_type': meal_type,
+                    'meal_date': today.isoformat(),
                     'analysis_time': datetime.now().isoformat(),
+                    'database_structure_fixes': [
+                        'main_food_only_in_foods_table',
+                        'ingredients_reference_main_food_id', 
+                        'no_redundant_ingredient_foods',
+                        'user_meals_table_integration',
+                        'proper_database_relationships'
+                    ],
                     'fixes_applied': [
                         'confidence_preservation',
                         'nutrition_calculation', 
                         'main_food_saving',
                         'ingredient_categories',
                         'user_preferences_update',
-                        'daily_summary_update'
+                        'daily_summary_update',
+                        'user_meals_integration'
                     ]
                 }
             })
