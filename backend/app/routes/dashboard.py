@@ -53,13 +53,29 @@ def get_dashboard_overview():
         """, (user_id, week_ago, today))
         week_avg = cursor.fetchone()
         
-        # Get recent analysis sessions
+        # Get recent analysis sessions with enhanced food details using the requested query
         cursor.execute("""
-            SELECT id, image_filename, analysis_status, total_estimated_calories, 
-                   confidence_score, created_at
-            FROM food_analysis_sessions 
-            WHERE user_id = %s 
-            ORDER BY created_at DESC 
+            SELECT
+                f.name AS food_name,
+                f.description AS food_description,
+                GROUP_CONCAT(DISTINCT di.ingredient_name) AS ingredients,
+                fas.total_estimated_calories AS total_calories,
+                fas.confidence_score,
+                fas.id as session_id,
+                fas.image_filename,
+                fas.created_at
+            FROM
+                foods f
+            JOIN
+                detected_ingredients di ON f.id = di.food_id
+            JOIN
+                food_analysis_sessions fas ON di.session_id = fas.id
+            WHERE
+                fas.user_id = %s AND fas.analysis_status = 'completed'
+            GROUP BY
+                f.id, fas.id, fas.created_at
+            ORDER BY
+                fas.created_at DESC
             LIMIT 5
         """, (user_id,))
         recent_analyses = cursor.fetchall()

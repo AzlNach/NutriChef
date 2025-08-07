@@ -18,6 +18,69 @@
     font-size: 24px;
 }
 
+.main-food-info {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 16px;
+    margin: 16px 0;
+}
+
+.main-food-name {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    color: #fff;
+}
+
+.main-food-description {
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0;
+    opacity: 0.9;
+    color: #fff;
+}
+
+.ingredients-summary {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 12px;
+    margin: 12px 0;
+}
+
+.ingredients-summary h4 {
+    margin: 0 0 8px 0;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.ingredients-summary p {
+    margin: 0;
+    color: #fff;
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.additional-notes {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 20px 0;
+}
+
+.additional-notes h4 {
+    margin: 0 0 12px 0;
+    color: #495057;
+    font-size: 16px;
+}
+
+.additional-notes p {
+    margin: 0;
+    color: #6c757d;
+    line-height: 1.5;
+}
+
 .overall-confidence {
     display: flex;
     align-items: center;

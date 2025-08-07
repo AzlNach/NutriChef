@@ -543,3 +543,115 @@ def secure_filename(filename):
     import re
     filename = re.sub(r'[^a-zA-Z0-9._-]', '', filename)
     return filename
+
+@food_analysis_bp.route('/session/<int:session_id>', methods=['GET'])
+@jwt_required()
+def get_analysis_result(session_id):
+    """Get analysis result by session ID with main food info and ingredients"""
+    try:
+        user_id = get_jwt_identity()
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get session details
+        cursor.execute("""
+            SELECT fas.*, f.name as main_food_name, f.description as main_food_description
+            FROM food_analysis_sessions fas
+            LEFT JOIN detected_ingredients di ON fas.id = di.session_id
+            LEFT JOIN foods f ON di.food_id = f.id
+            WHERE fas.id = %s AND fas.user_id = %s
+            LIMIT 1
+        """, (session_id, user_id))
+        session_data = cursor.fetchone()
+        
+        if not session_data:
+            cursor.close()
+            conn.close()
+            return jsonify({'error': 'Analysis session not found'}), 404
+        
+        # Get all detected ingredients for this session
+        cursor.execute("""
+            SELECT di.*, f.name as food_name
+            FROM detected_ingredients di
+            LEFT JOIN foods f ON di.food_id = f.id
+            WHERE di.session_id = %s
+            ORDER BY di.created_at
+        """, (session_id,))
+        ingredients = cursor.fetchall()
+        
+        # Get user meal info if exists
+        cursor.execute("""
+            SELECT um.*, mt.name as meal_type_name
+            FROM user_meals um
+            LEFT JOIN meal_types mt ON um.meal_type_id = mt.id
+            WHERE um.session_id = %s
+        """, (session_id,))
+        meal_info = cursor.fetchone()
+        
+        cursor.close()
+        conn.close()
+        
+        # Format detected foods
+        detected_foods = []
+        for ingredient in ingredients:
+            detected_foods.append({
+                'id': ingredient['id'],
+                'name': ingredient['ingredient_name'],
+                'category': ingredient['ingredient_category'],
+                'portion': float(ingredient['estimated_portion']) if ingredient['estimated_portion'] else 0,
+                'unit': ingredient['portion_unit'],
+                'confidence': float(ingredient['confidence_score']) if ingredient['confidence_score'] else 0,
+                'nutrition': {
+                    'calories': float(ingredient['calories']) if ingredient['calories'] else 0,
+                    'protein': float(ingredient['protein']) if ingredient['protein'] else 0,
+                    'carbs': float(ingredient['carbs']) if ingredient['carbs'] else 0,
+                    'fat': float(ingredient['fat']) if ingredient['fat'] else 0,
+                    'fiber': float(ingredient['fiber']) if ingredient['fiber'] else 0,
+                    'sugar': float(ingredient['sugar']) if ingredient['sugar'] else 0,
+                    'sodium': float(ingredient['sodium']) if ingredient['sodium'] else 0
+                }
+            })
+        
+        # Calculate total nutrition
+        total_nutrition = {
+            'calories': sum(food['nutrition']['calories'] for food in detected_foods),
+            'protein': sum(food['nutrition']['protein'] for food in detected_foods),
+            'carbs': sum(food['nutrition']['carbs'] for food in detected_foods),
+            'fat': sum(food['nutrition']['fat'] for food in detected_foods),
+            'fiber': sum(food['nutrition']['fiber'] for food in detected_foods),
+            'sugar': sum(food['nutrition']['sugar'] for food in detected_foods),
+            'sodium': sum(food['nutrition']['sodium'] for food in detected_foods)
+        }
+        
+        # Format response
+        analysis_result = {
+            'session_id': session_id,
+            'status': session_data['analysis_status'],
+            'main_food': {
+                'name': session_data['main_food_name'] or 'Unknown Dish',
+                'description': session_data['main_food_description'] or 'No description available',
+                'confidence': float(session_data['confidence_score']) if session_data['confidence_score'] else 0
+            },
+            'detected_foods': detected_foods,
+            'total_nutrition': total_nutrition,
+            'confidence_overall': float(session_data['confidence_score']) if session_data['confidence_score'] else 0,
+            'image_filename': session_data['image_filename'],
+            'total_estimated_calories': float(session_data['total_estimated_calories']) if session_data['total_estimated_calories'] else 0,
+            'created_at': session_data['created_at'].isoformat() if session_data['created_at'] else None,
+            'meal_type': meal_info['meal_type_name'] if meal_info else 'Unknown',
+            'meal_date': meal_info['meal_date'].isoformat() if meal_info and meal_info['meal_date'] else None,
+            'notes': meal_info['notes'] if meal_info else None
+        }
+        
+        return jsonify({
+            'success': True,
+            'analysis_result': analysis_result
+        }), 200
+        
+    except Exception as e:
+        print(f"Get analysis result error: {e}")
+        return jsonify({'error': 'Failed to get analysis result'}), 500

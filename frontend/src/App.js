@@ -26,6 +26,8 @@ function App() {
     const [showAuthRequired, setShowAuthRequired] = useState(false);
     const [errorType, setErrorType] = useState('error');
     const [showError, setShowError] = useState(false);
+    const [isEditingProfile, setIsEditingProfile] = useState(false);
+    const [editedUserData, setEditedUserData] = useState({});
 
     useEffect(() => {
         // Check if user is authenticated on app load
@@ -56,14 +58,28 @@ function App() {
             setIsLoading(true);
             const history = await nutritionService.getNutritionHistory(30);
             const dailySummary = await nutritionService.getDailySummary();
+            
+            // Also get dashboard data for recent analyses if not already loaded
+            let dashboardOverview = dashboardData?.overview;
+            if (!dashboardOverview) {
+                try {
+                    dashboardOverview = await dashboardService.getOverview();
+                } catch (error) {
+                    console.warn('Could not load dashboard overview for recent analyses:', error);
+                }
+            }
+            
             console.log('Nutrition History Response:', history);
             console.log('Daily Summary Response:', dailySummary);
+            console.log('Dashboard Overview for Recent Analyses:', dashboardOverview);
             
-            // FIX: Handle missing recent_analyses in history response
-            // Create structure that matches frontend expectations
+            // FIX: Structure nutrition data properly for Recent Food Analyses
             const historyData = {
-                // Handle both possible response structures
-                recent_analyses: history.recent_analyses || history.nutrition_history || [],
+                // Get recent_analyses from dashboard overview data, fallback to daily summary food_analyses
+                recent_analyses: dashboardOverview?.recent_analyses || 
+                               dailySummary?.food_analyses || 
+                               history.food_analyses || 
+                               [],
                 nutrition_history: history.nutrition_history || [],
                 summary: history.summary || {},
                 user_goals: history.user_goals || {}
@@ -354,6 +370,94 @@ function App() {
         setDashboardData(null);
         setNutritionData(null);
         setUserData(null);
+    };
+
+    // FIX 8: Profile edit functionality
+    const handleEditProfile = () => {
+        setIsEditingProfile(true);
+        setEditedUserData({
+            full_name: userData?.full_name || '',
+            date_of_birth: userData?.date_of_birth || '',
+            gender: userData?.gender || '',
+            height: userData?.height || '',
+            weight: userData?.weight || '',
+            activity_level: userData?.activity_level || '',
+            daily_calorie_goal: userData?.daily_calorie_goal || ''
+        });
+    };
+
+    const handleSaveProfile = async () => {
+        try {
+            setIsLoading(true);
+            
+            // FIX: Clean data before sending - convert empty strings to null for dates
+            const cleanedData = { ...editedUserData };
+            if (cleanedData.date_of_birth === '') {
+                cleanedData.date_of_birth = null;
+            }
+            if (cleanedData.height === '') {
+                cleanedData.height = null;
+            }
+            if (cleanedData.weight === '') {
+                cleanedData.weight = null;
+            }
+            if (cleanedData.daily_calorie_goal === '') {
+                cleanedData.daily_calorie_goal = null;
+            }
+            
+            // Call userService to update profile
+            const updatedProfile = await userService.updateProfile(cleanedData);
+            
+            // Update local user data
+            setUserData(prevData => ({
+                ...prevData,
+                ...cleanedData
+            }));
+            
+            setIsEditingProfile(false);
+            showErrorMessage('Profile updated successfully!', 'info');
+        } catch (error) {
+            console.error('Failed to update profile:', error);
+            showErrorMessage('Failed to update profile: ' + error.message, 'error');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleCancelEdit = () => {
+        setIsEditingProfile(false);
+        setEditedUserData({});
+    };
+
+    const handleProfileFieldChange = (field, value) => {
+        setEditedUserData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    // Handle view analysis details from recent analyses
+    const handleViewAnalysisDetails = async (sessionId) => {
+        try {
+            setIsLoading(true);
+            console.log(`🔍 Loading analysis details for session: ${sessionId}`);
+            
+            // Use the foodService to get complete analysis result
+            const response = await foodService.getAnalysisResult(sessionId);
+            
+            if (response.success && response.analysis_result) {
+                console.log('✅ Analysis result loaded:', response.analysis_result);
+                setAnalysisResult(response.analysis_result);
+                setCurrentView('result');
+            } else {
+                throw new Error('Analysis result not found');
+            }
+        } catch (error) {
+            console.error('❌ Failed to load analysis details:', error);
+            setError('Failed to load analysis details. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -824,70 +928,79 @@ function App() {
                                 </div>
                             ) : nutritionData ? (
                                 <div className="history-content">
-                                    {/* Recent Food Analyses - Moved from Dashboard */}
+                                    {/* Recent Food Analyses - FIX 7: Display from food_analysis_sessions with foods and ingredients */}
                                     <div className="history-section">
                                         <h3>Recent Food Analyses</h3>
                                         {(
-                                            // FIX: Handle multiple possible data structures
+                                            // FIX: Use recent_analyses from food_analysis_sessions
                                             nutritionData.history?.recent_analyses?.length > 0 || 
-                                            nutritionData.history?.nutrition_history?.length > 0 ||
-                                            (Array.isArray(nutritionData.history) && nutritionData.history.length > 0)
+                                            nutritionData.history?.food_analyses?.length > 0
                                         ) ? (
                                             <div className="recent-analyses-table">
                                                 <div className="table-header">
                                                     <div className="header-cell">Food Name</div>
                                                     <div className="header-cell">Ingredients</div>
                                                     <div className="header-cell">Total Calories</div>
+                                                    <div className="header-cell">Date</div>
                                                     <div className="header-cell">Actions</div>
                                                 </div>
                                                 {(
-                                                    // FIX: Use the correct data source
+                                                    // FIX 7: Use proper food analysis data from sessions
                                                     nutritionData.history?.recent_analyses || 
-                                                    nutritionData.history?.nutrition_history || 
-                                                    (Array.isArray(nutritionData.history) ? nutritionData.history : [])
+                                                    nutritionData.history?.food_analyses || []
                                                 ).map((analysis, index) => (
-                                                    <div key={analysis.id || index} className="table-row">
+                                                    <div key={analysis.session_id || analysis.id || index} className="table-row">
                                                         <div className="table-cell">
-                                                            {/* FIX: Handle different food name structures */}
-                                                            {analysis.detected_foods?.map(food => food.name).join(', ') || 
-                                                             analysis.food_names?.join(', ') ||
-                                                             analysis.food_name || 
+                                                            {/* FIX 7: Display main food name from foods table */}
+                                                            {analysis.food_name || 
+                                                             analysis.main_food?.name ||
+                                                             analysis.detected_foods?.[0]?.name || 
                                                              'Unknown Food'}
                                                         </div>
                                                         <div className="table-cell">
-                                                            {analysis.detected_foods?.length || 
-                                                             analysis.ingredients?.length || 
-                                                             analysis.ingredient_count || 0} items
+                                                            {/* FIX: Proper handling of ingredients - prevent map error */}
+                                                            {(() => {
+                                                                // Handle different ingredient data structures safely
+                                                                if (analysis.ingredient_name) {
+                                                                    return `${analysis.ingredient_name} (${analysis.estimated_portion || 0}${analysis.portion_unit || 'g'})`;
+                                                                } else if (analysis.ingredients) {
+                                                                    // Check if ingredients is already a string (from GROUP_CONCAT)
+                                                                    if (typeof analysis.ingredients === 'string') {
+                                                                        return analysis.ingredients;
+                                                                    } else if (Array.isArray(analysis.ingredients)) {
+                                                                        return analysis.ingredients.map(ing => 
+                                                                            typeof ing === 'string' ? ing : (ing.name || ing)
+                                                                        ).join(', ');
+                                                                    } else {
+                                                                        // If ingredients is not string or array, convert to string
+                                                                        return String(analysis.ingredients);
+                                                                    }
+                                                                } else if (analysis.detected_foods && Array.isArray(analysis.detected_foods)) {
+                                                                    return analysis.detected_foods.map(food => food.name || 'Unknown ingredient').join(', ');
+                                                                }
+                                                                return 'No ingredients listed';
+                                                            })()}
                                                         </div>
                                                         <div className="table-cell">
                                                             {Math.round(
+                                                                analysis.total_estimated_calories ||
+                                                                analysis.calories ||
                                                                 analysis.total_nutrition?.calories ||
-                                                                analysis.total_estimated_calories || 
-                                                                analysis.total_calories || 
-                                                                analysis.calories || 0
+                                                                analysis.total_calories || 0
                                                             )} cal
+                                                        </div>
+                                                        <div className="table-cell">
+                                                            {analysis.created_at ? 
+                                                                new Date(analysis.created_at).toLocaleDateString() : 
+                                                                'Unknown'
+                                                            }
                                                         </div>
                                                         <div className="table-cell">
                                                             <button 
                                                                 className="view-analysis-btn"
-                                                                onClick={() => {
-                                                                    // FIX: Create proper analysis result structure
-                                                                    const analysisResult = {
-                                                                        detected_foods: analysis.detected_foods || [],
-                                                                        total_nutrition: analysis.total_nutrition || {
-                                                                            calories: analysis.total_calories || analysis.calories || 0,
-                                                                            protein: analysis.total_protein || analysis.protein || 0,
-                                                                            carbs: analysis.total_carbs || analysis.carbs || 0,
-                                                                            fat: analysis.total_fat || analysis.fat || 0
-                                                                        },
-                                                                        confidence_overall: analysis.confidence_overall || analysis.confidence || 0.8,
-                                                                        session_id: analysis.session_id || analysis.id
-                                                                    };
-                                                                    setAnalysisResult(analysisResult);
-                                                                    setCurrentView('result');
-                                                                }}
+                                                                onClick={() => handleViewAnalysisDetails(analysis.session_id || analysis.id)}
                                                             >
-                                                                View Analysis
+                                                                View Details
                                                             </button>
                                                         </div>
                                                     </div>
@@ -981,21 +1094,51 @@ function App() {
                         </div>
                     )}
 
-                    {/* Profile View */}
+                    {/* Profile View - FIX 8: Add edit functionality */}
                     {currentView === 'profile' && isAuthenticated && (
                         <div className="profile-view">
                             <div className="profile-header">
                                 <h2 className="profile-title">User Profile</h2>
-                                <button 
-                                    className="refresh-button"
-                                    onClick={() => {
-                                        setUserData(null);
-                                        loadUserData();
-                                    }}
-                                    disabled={isLoading}
-                                >
-                                    🔄 Refresh
-                                </button>
+                                <div className="profile-actions">
+                                    {!isEditingProfile ? (
+                                        <>
+                                            <button 
+                                                className="edit-profile-button"
+                                                onClick={handleEditProfile}
+                                                disabled={isLoading}
+                                            >
+                                                ✏️ Edit Profile
+                                            </button>
+                                            <button 
+                                                className="refresh-button"
+                                                onClick={() => {
+                                                    setUserData(null);
+                                                    loadUserData();
+                                                }}
+                                                disabled={isLoading}
+                                            >
+                                                🔄 Refresh
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button 
+                                                className="save-profile-button"
+                                                onClick={handleSaveProfile}
+                                                disabled={isLoading}
+                                            >
+                                                💾 Save Changes
+                                            </button>
+                                            <button 
+                                                className="cancel-edit-button"
+                                                onClick={handleCancelEdit}
+                                                disabled={isLoading}
+                                            >
+                                                ❌ Cancel
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
                             </div>
 
                             {isLoading ? (
@@ -1005,8 +1148,11 @@ function App() {
                                 </div>
                             ) : userData ? (
                                 <div className="profile-content">
+                                    {/* FIX 8: Enhanced user info with edit capability */}
                                     <div className="user-info">
                                         <h3>Account Information</h3>
+                                        
+                                        {/* Non-editable fields */}
                                         <div className="info-group">
                                             <label>Username:</label>
                                             <span>{userData.username || 'Not available'}</span>
@@ -1016,13 +1162,123 @@ function App() {
                                             <span>{userData.email || 'Not available'}</span>
                                         </div>
                                         <div className="info-group">
-                                            <label>Full Name:</label>
-                                            <span>{userData.full_name || 'Not provided'}</span>
-                                        </div>
-                                        <div className="info-group">
                                             <label>Member since:</label>
                                             <span>{userData.created_at ? new Date(userData.created_at).toLocaleDateString() : 'Not available'}</span>
                                         </div>
+                                        
+                                        {/* Editable fields - FIX 8 */}
+                                        <div className="info-group">
+                                            <label>Full Name:</label>
+                                            {isEditingProfile ? (
+                                                <input
+                                                    type="text"
+                                                    value={editedUserData.full_name || ''}
+                                                    onChange={(e) => handleProfileFieldChange('full_name', e.target.value)}
+                                                    placeholder="Enter your full name"
+                                                />
+                                            ) : (
+                                                <span>{userData.full_name || 'Not provided'}</span>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="info-group">
+                                            <label>Date of Birth:</label>
+                                            {isEditingProfile ? (
+                                                <input
+                                                    type="date"
+                                                    value={editedUserData.date_of_birth || ''}
+                                                    onChange={(e) => handleProfileFieldChange('date_of_birth', e.target.value)}
+                                                />
+                                            ) : (
+                                                <span>{userData.date_of_birth || 'Not provided'}</span>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="info-group">
+                                            <label>Gender:</label>
+                                            {isEditingProfile ? (
+                                                <select
+                                                    value={editedUserData.gender || ''}
+                                                    onChange={(e) => handleProfileFieldChange('gender', e.target.value)}
+                                                >
+                                                    <option value="">Select gender</option>
+                                                    <option value="male">Male</option>
+                                                    <option value="female">Female</option>
+                                                    <option value="other">Other</option>
+                                                </select>
+                                            ) : (
+                                                <span>{userData.gender || 'Not provided'}</span>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="info-group">
+                                            <label>Height (cm):</label>
+                                            {isEditingProfile ? (
+                                                <input
+                                                    type="number"
+                                                    value={editedUserData.height || ''}
+                                                    onChange={(e) => handleProfileFieldChange('height', e.target.value)}
+                                                    placeholder="Enter height in cm"
+                                                    min="50"
+                                                    max="300"
+                                                />
+                                            ) : (
+                                                <span>{userData.height ? `${userData.height} cm` : 'Not provided'}</span>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="info-group">
+                                            <label>Weight (kg):</label>
+                                            {isEditingProfile ? (
+                                                <input
+                                                    type="number"
+                                                    value={editedUserData.weight || ''}
+                                                    onChange={(e) => handleProfileFieldChange('weight', e.target.value)}
+                                                    placeholder="Enter weight in kg"
+                                                    min="20"
+                                                    max="500"
+                                                    step="0.1"
+                                                />
+                                            ) : (
+                                                <span>{userData.weight ? `${userData.weight} kg` : 'Not provided'}</span>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="info-group">
+                                            <label>Activity Level:</label>
+                                            {isEditingProfile ? (
+                                                <select
+                                                    value={editedUserData.activity_level || ''}
+                                                    onChange={(e) => handleProfileFieldChange('activity_level', e.target.value)}
+                                                >
+                                                    <option value="">Select activity level</option>
+                                                    <option value="sedentary">Sedentary (little/no exercise)</option>
+                                                    <option value="light">Light (exercise 1-3 days/week)</option>
+                                                    <option value="moderate">Moderate (exercise 3-5 days/week)</option>
+                                                    <option value="active">Active (exercise 6-7 days/week)</option>
+                                                    <option value="very_active">Very Active (intense exercise/sports)</option>
+                                                </select>
+                                            ) : (
+                                                <span>{userData.activity_level || 'Not provided'}</span>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="info-group">
+                                            <label>Daily Calorie Goal:</label>
+                                            {isEditingProfile ? (
+                                                <input
+                                                    type="number"
+                                                    value={editedUserData.daily_calorie_goal || ''}
+                                                    onChange={(e) => handleProfileFieldChange('daily_calorie_goal', e.target.value)}
+                                                    placeholder="Enter daily calorie goal"
+                                                    min="800"
+                                                    max="5000"
+                                                />
+                                            ) : (
+                                                <span>{userData.daily_calorie_goal ? `${userData.daily_calorie_goal} calories` : 'Not set'}</span>
+                                            )}
+                                        </div>
+                                        
                                         {userData.stats && (
                                             <div className="info-group">
                                                 <label>Total Analyses:</label>

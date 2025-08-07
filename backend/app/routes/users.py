@@ -157,6 +157,95 @@ def get_preferences():
         print(f"Get preferences error: {e}")
         return jsonify({'error': 'Failed to get preferences'}), 500
 
+@users_bp.route('/profile', methods=['PUT'])
+@jwt_required()
+def update_profile():
+    try:
+        user_id = int(get_jwt_identity())
+        data = request.get_json()
+        
+        # Debug: Print received data
+        print(f"Update profile data received: {data}")
+        
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        cursor = conn.cursor()
+        
+        # Prepare update fields
+        update_fields = []
+        update_values = []
+        
+        allowed_fields = [
+            'full_name', 'date_of_birth', 'gender', 'height', 
+            'weight', 'activity_level', 'daily_calorie_goal'
+        ]
+        
+        for field in allowed_fields:
+            if field in data:
+                value = data[field]
+                
+                # FIX: Handle empty date_of_birth - convert empty string to NULL
+                if field == 'date_of_birth':
+                    if value == '' or value is None:
+                        value = None
+                    elif isinstance(value, str):
+                        # Validate date format
+                        try:
+                            from datetime import datetime as dt
+                            dt.strptime(value, '%Y-%m-%d')
+                        except ValueError:
+                            return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
+                
+                # Handle gender field validation
+                elif field == 'gender':
+                    if value == '' or value is None:
+                        value = None
+                    elif value not in ['male', 'female', 'other']:
+                        return jsonify({'error': 'Invalid gender value. Must be male, female, or other'}), 400
+                
+                # Handle activity_level field validation
+                elif field == 'activity_level':
+                    if value == '' or value is None:
+                        value = None
+                    elif value not in ['sedentary', 'light', 'moderate', 'active', 'very_active']:
+                        return jsonify({'error': 'Invalid activity level'}), 400
+                
+                # Handle empty numeric fields
+                elif field in ['height', 'weight', 'daily_calorie_goal']:
+                    if value == '' or value is None:
+                        value = None
+                    else:
+                        try:
+                            value = float(value) if field in ['height', 'weight'] else int(value)
+                        except (ValueError, TypeError):
+                            return jsonify({'error': f'Invalid {field} value'}), 400
+                
+                update_fields.append(f"{field} = %s")
+                update_values.append(value)
+        
+        if update_fields:
+            update_fields.append("updated_at = %s")
+            update_values.append(datetime.now())
+            update_values.append(user_id)
+            
+            query = f"UPDATE users SET {', '.join(update_fields)} WHERE id = %s"
+            cursor.execute(query, update_values)
+            conn.commit()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'message': 'Profile updated successfully'}), 200
+        
+    except Exception as e:
+        print(f"Update profile error: {e}")
+        return jsonify({'error': 'Failed to update profile'}), 500
+
 @users_bp.route('/preferences', methods=['PUT'])
 @jwt_required()
 def update_preferences():

@@ -11,14 +11,20 @@ const FoodAnalysisResult = ({
   const [editingFood, setEditingFood] = useState(null);
   const [editValues, setEditValues] = useState({});
 
-  const { detected_foods = [], total_nutrition = {}, confidence_overall = 0 } = analysisResult || {};
+  const { 
+    detected_foods = [], 
+    total_nutrition = {}, 
+    confidence_overall = 0,
+    main_food = {},
+    additional_notes = ''
+  } = analysisResult || {};
 
   const handleEditClick = (food) => {
     setEditingFood(food.id);
     setEditValues({
       name: food.name,
-      estimated_portion: food.estimated_portion,
-      portion_unit: food.portion_unit
+      estimated_portion: food.estimated_portion || food.portion,
+      portion_unit: food.portion_unit || food.unit
     });
   };
 
@@ -59,6 +65,24 @@ const FoodAnalysisResult = ({
     <div className="analysis-result-container">
       <div className="analysis-header">
         <h2>🍽️ Food Analysis Result</h2>
+        
+        {/* Main Food Information */}
+        {main_food && main_food.name && (
+          <div className="main-food-info">
+            <h3 className="main-food-name">{main_food.name}</h3>
+            {main_food.description && (
+              <p className="main-food-description">{main_food.description}</p>
+            )}
+            {/* Display ingredients summary */}
+            {detected_foods && detected_foods.length > 0 && (
+              <div className="ingredients-summary">
+                <h4>📋 Main Ingredients:</h4>
+                <p>{detected_foods.map(food => food.name).join(', ')}</p>
+              </div>
+            )}
+          </div>
+        )}
+        
         <div className="overall-confidence">
           <span className="confidence-label">Overall Confidence:</span>
           <div 
@@ -76,13 +100,21 @@ const FoodAnalysisResult = ({
         </div>
       </div>
 
+      {/* Additional Notes */}
+      {additional_notes && (
+        <div className="additional-notes">
+          <h4>📝 Analysis Notes</h4>
+          <p>{additional_notes}</p>
+        </div>
+      )}
+
       <div className="detected-foods">
-        <h3>Detected Foods ({detected_foods.length})</h3>
-        {detected_foods.map((food) => (
-          <div key={food.id} className="food-item">
+        <h3>Detected Ingredients ({detected_foods.length})</h3>
+        {detected_foods.map((food, index) => (
+          <div key={food.id || index} className="food-item">
             <div className="food-header">
               <div className="food-info">
-                {editingFood === food.id ? (
+                {editingFood === (food.id || index) ? (
                   <div className="edit-form">
                     <input
                       type="text"
@@ -110,7 +142,7 @@ const FoodAnalysisResult = ({
                       </select>
                     </div>
                     <div className="edit-actions">
-                      <button onClick={() => handleSaveEdit(food.id)} className="save-btn">
+                      <button onClick={() => handleSaveEdit(food.id || index)} className="save-btn">
                         ✓ Save
                       </button>
                       <button onClick={handleCancelEdit} className="cancel-btn">
@@ -122,7 +154,7 @@ const FoodAnalysisResult = ({
                   <div className="food-display">
                     <h4 className="food-name">{food.name}</h4>
                     <p className="food-portion">
-                      {food.estimated_portion} {food.portion_unit}
+                      {food.estimated_portion || food.portion} {food.portion_unit || food.unit}
                       {food.category && <span className="food-category"> • {food.category}</span>}
                     </p>
                   </div>
@@ -138,12 +170,12 @@ const FoodAnalysisResult = ({
                 </span>
               </div>
 
-              {!isEditing && editingFood !== food.id && (
+              {!isEditing && editingFood !== (food.id || index) && (
                 <div className="food-actions">
                   <button onClick={() => handleEditClick(food)} className="edit-btn">
                     ✏️
                   </button>
-                  <button onClick={() => onRemoveFood(food.id)} className="remove-btn">
+                  <button onClick={() => onRemoveFood(food.id || index)} className="remove-btn">
                     🗑️
                   </button>
                 </div>
