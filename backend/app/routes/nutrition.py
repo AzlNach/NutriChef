@@ -404,3 +404,58 @@ def update_nutrition_goals():
     except Exception as e:
         print(f"Update nutrition goals error: {e}")
         return jsonify({'error': 'Failed to update nutrition goals'}), 500
+
+@nutrition_bp.route('/ingredients-count/<date>', methods=['GET'])
+@jwt_required()
+def get_ingredients_count_by_date(date):
+    """Get total ingredient count for all food analysis sessions on a specific date"""
+    try:
+        user_id = int(get_jwt_identity())
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get all sessions for the specified date
+        cursor.execute("""
+            SELECT fas.id as session_id
+            FROM food_analysis_sessions fas
+            WHERE fas.user_id = %s 
+            AND DATE(fas.created_at) = %s
+            AND fas.analysis_status = 'completed'
+        """, (user_id, date))
+        
+        sessions = cursor.fetchall()
+        
+        if not sessions:
+            cursor.close()
+            conn.close()
+            return jsonify({'count': 0, 'sessions': 0}), 200
+        
+        # Count all detected ingredients for these sessions
+        session_ids = [session['session_id'] for session in sessions]
+        placeholders = ','.join(['%s'] * len(session_ids))
+        
+        cursor.execute(f"""
+            SELECT COUNT(*) as total_ingredients
+            FROM detected_ingredients di
+            WHERE di.session_id IN ({placeholders})
+        """, session_ids)
+        
+        result = cursor.fetchone()
+        total_ingredients = result['total_ingredients'] if result else 0
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'count': total_ingredients,
+            'sessions': len(sessions),
+            'date': date
+        }), 200
+        
+    except Exception as e:
+        print(f"Get ingredients count error: {e}")
+        return jsonify({'error': 'Failed to get ingredients count', 'count': 1}), 500

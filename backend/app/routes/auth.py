@@ -28,17 +28,21 @@ def register():
     try:
         data = request.get_json()
         
-        # Validate required fields
-        if not data or not all(k in data for k in ('username', 'email', 'password')):
-            return jsonify({'error': 'Username, email, and password are required'}), 400
+        # Validate required fields for new registration format
+        required_fields = ['username', 'full_name', 'email', 'password']
+        if not data or not all(k in data for k in required_fields):
+            return jsonify({'error': 'Username, full name, email, and password are required'}), 400
         
         username = data['username'].strip()
+        full_name = data['full_name'].strip()
         email = data['email'].strip().lower()
         password = data['password']
         
         # Basic validation
         if len(username) < 3:
             return jsonify({'error': 'Username must be at least 3 characters'}), 400
+        if len(full_name) < 2:
+            return jsonify({'error': 'Full name must be at least 2 characters'}), 400
         if len(password) < 6:
             return jsonify({'error': 'Password must be at least 6 characters'}), 400
         if '@' not in email:
@@ -51,7 +55,7 @@ def register():
         
         cursor = conn.cursor(dictionary=True)
         
-        # Check if user already exists
+        # Check if username or email already exists
         cursor.execute("SELECT id FROM users WHERE username = %s OR email = %s", (username, email))
         existing_user = cursor.fetchone()
         
@@ -63,17 +67,17 @@ def register():
         # Hash password
         password_hash = generate_password_hash(password)
         
-        # Insert new user
+        # Insert new user with username and full_name
         insert_query = """
-        INSERT INTO users (username, email, password_hash, created_at) 
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO users (username, email, password_hash, full_name, created_at) 
+        VALUES (%s, %s, %s, %s, %s)
         """
-        cursor.execute(insert_query, (username, email, password_hash, datetime.now()))
+        cursor.execute(insert_query, (username, email, password_hash, full_name, datetime.now()))
         user_id = cursor.lastrowid
         conn.commit()
         
         # Get the created user
-        cursor.execute("SELECT id, username, email, created_at FROM users WHERE id = %s", (user_id,))
+        cursor.execute("SELECT id, username, email, full_name, created_at FROM users WHERE id = %s", (user_id,))
         user = cursor.fetchone()
         
         cursor.close()
@@ -92,6 +96,7 @@ def register():
                 'id': user['id'],
                 'username': user['username'],
                 'email': user['email'],
+                'full_name': user['full_name'],
                 'created_at': user['created_at'].isoformat() if user['created_at'] else None
             }
         }), 201
@@ -106,10 +111,10 @@ def login():
         data = request.get_json()
         
         # Validate required fields
-        if not data or not all(k in data for k in ('username', 'password')):
-            return jsonify({'error': 'Username and password are required'}), 400
+        if not data or not all(k in data for k in ('email', 'password')):
+            return jsonify({'error': 'Email and password are required'}), 400
         
-        username = data['username'].strip()
+        email = data['email'].strip().lower()
         password = data['password']
         
         # Get database connection
@@ -119,12 +124,12 @@ def login():
         
         cursor = conn.cursor(dictionary=True)
         
-        # Find user by username or email
+        # Find user by email
         cursor.execute("""
-            SELECT id, username, email, password_hash, created_at 
+            SELECT id, username, email, password_hash, full_name, created_at 
             FROM users 
-            WHERE username = %s OR email = %s
-        """, (username, username))
+            WHERE email = %s
+        """, (email,))
         user = cursor.fetchone()
         
         cursor.close()
@@ -132,7 +137,7 @@ def login():
         
         # Verify user exists and password is correct
         if not user or not check_password_hash(user['password_hash'], password):
-            return jsonify({'error': 'Invalid username or password'}), 401
+            return jsonify({'error': 'Invalid email or password'}), 401
         
         # Create access token
         access_token = create_access_token(
@@ -147,6 +152,7 @@ def login():
                 'id': user['id'],
                 'username': user['username'],
                 'email': user['email'],
+                'full_name': user.get('full_name'),
                 'created_at': user['created_at'].isoformat() if user['created_at'] else None
             }
         }), 200
@@ -154,6 +160,49 @@ def login():
     except Exception as e:
         print(f"Login error: {e}")
         return jsonify({'error': 'Login failed'}), 500
+
+@auth_bp.route('/verify', methods=['GET'])
+@jwt_required()
+def verify_token():
+    """Verify if the token is still valid"""
+    try:
+        current_user_id = get_jwt_identity()
+        
+        # Get database connection
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        cursor = conn.cursor(dictionary=True)
+        
+        # Check if user still exists
+        cursor.execute("""
+            SELECT id, username, email, full_name, created_at 
+            FROM users 
+            WHERE id = %s
+        """, (current_user_id,))
+        user = cursor.fetchone()
+        
+        cursor.close()
+        conn.close()
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        return jsonify({
+            'message': 'Token is valid',
+            'user': {
+                'id': user['id'],
+                'username': user['username'],
+                'email': user['email'],
+                'full_name': user.get('full_name'),
+                'created_at': user['created_at'].isoformat() if user['created_at'] else None
+            }
+        }), 200
+        
+    except Exception as e:
+        print(f"Token verification error: {e}")
+        return jsonify({'error': 'Token verification failed'}), 401
 
 @auth_bp.route('/logout', methods=['POST'])
 @jwt_required()

@@ -6,6 +6,7 @@ const FoodAnalysisResult = ({
   onEditFood, 
   onRemoveFood, 
   onConfirm, 
+  onNewAnalysis,  // Add this prop for "Analyze Another" functionality
   isEditing = false 
 }) => {
   const [editingFood, setEditingFood] = useState(null);
@@ -51,6 +52,12 @@ const FoodAnalysisResult = ({
     return 'Low';
   };
 
+  const getConfidenceIndicator = (confidence) => {
+    if (confidence >= 0.8) return { text: 'Good', color: '#065f46' }; // Dark green for better contrast
+    if (confidence >= 0.6) return { text: 'OK', color: '#FF9800' };
+    return { text: 'Bad', color: '#F44336' };
+  };
+
   if (!analysisResult) {
     return (
       <div className="analysis-result-container">
@@ -64,7 +71,18 @@ const FoodAnalysisResult = ({
   return (
     <div className="analysis-result-container">
       <div className="analysis-header">
-        <h2>🍽️ Food Analysis Result</h2>
+        <div className="header-content">
+          <h2>🍽️ Food Analysis Result</h2>
+          {onNewAnalysis && (
+            <button
+              onClick={onNewAnalysis}
+              className="analyze-another-btn"
+              title="Analyze Another Food"
+            >
+              🔄 Analyze Another
+            </button>
+          )}
+        </div>
         
         {/* Main Food Information */}
         {main_food && main_food.name && (
@@ -85,17 +103,25 @@ const FoodAnalysisResult = ({
         
         <div className="overall-confidence">
           <span className="confidence-label">Overall Confidence:</span>
-          <div 
-            className="confidence-bar"
-            style={{ '--confidence-color': getConfidenceColor(confidence_overall) }}
-          >
+          <div className="confidence-container">
             <div 
-              className="confidence-fill"
-              style={{ width: `${confidence_overall * 100}%` }}
-            ></div>
-            <span className="confidence-text">
-              {getConfidenceText(confidence_overall)} ({Math.round(confidence_overall * 100)}%)
-            </span>
+              className="confidence-bar"
+              style={{ '--confidence-color': getConfidenceColor(confidence_overall) }}
+            >
+              <div 
+                className="confidence-fill"
+                style={{ width: `${confidence_overall * 100}%` }}
+              ></div>
+              <span className="confidence-text">
+                {getConfidenceText(confidence_overall)} ({Math.round(confidence_overall * 100)}%)
+              </span>
+            </div>
+            <div 
+              className="confidence-indicator"
+              style={{ color: getConfidenceIndicator(confidence_overall).color }}
+            >
+              {getConfidenceIndicator(confidence_overall).text}
+            </div>
           </div>
         </div>
       </div>
@@ -105,117 +131,146 @@ const FoodAnalysisResult = ({
         <div className="additional-notes">
           <h4>📝 Analysis Notes</h4>
           <p>{additional_notes}</p>
+          
         </div>
       )}
 
-      <div className="detected-foods">
-        <h3>Detected Ingredients ({detected_foods.length})</h3>
-        {detected_foods.map((food, index) => (
-          <div key={food.id || index} className="food-item">
-            <div className="food-header">
-              <div className="food-info">
-                {editingFood === (food.id || index) ? (
-                  <div className="edit-form">
-                    <input
-                      type="text"
-                      value={editValues.name}
-                      onChange={(e) => setEditValues({...editValues, name: e.target.value})}
-                      className="food-name-input"
-                    />
-                    <div className="portion-inputs">
-                      <input
-                        type="number"
-                        value={editValues.estimated_portion}
-                        onChange={(e) => setEditValues({...editValues, estimated_portion: parseFloat(e.target.value)})}
-                        className="portion-input"
-                      />
-                      <select
-                        value={editValues.portion_unit}
-                        onChange={(e) => setEditValues({...editValues, portion_unit: e.target.value})}
-                        className="unit-select"
-                      >
-                        <option value="grams">grams</option>
-                        <option value="cups">cups</option>
-                        <option value="pieces">pieces</option>
-                        <option value="slices">slices</option>
-                        <option value="tablespoons">tablespoons</option>
-                      </select>
+      {/* Main Content Grid - Food Analysis and Detected Ingredients Side by Side */}
+      <div className="analysis-content-grid">
+        {/* Left Side - Food Analysis Overview */}
+        <div className="food-analysis-overview">
+          <h3>🔍 Food Analysis Overview</h3>
+          <div className="overview-content">
+            <div className="analysis-stats">
+              <div className="stat-item">
+                <span className="stat-label">Detected Items</span>
+                <span className="stat-value">{detected_foods.length}</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-label">Analysis Confidence</span>
+                <span className="stat-value">{Math.round(confidence_overall * 100)}%</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-label">Total Calories</span>
+                <span className="stat-value">{Math.round(total_nutrition.calories || 0)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Side - Detected Ingredients */}
+        <div className="detected-ingredients-section">
+          <h3>🥘 Detected Ingredients ({detected_foods.length})</h3>
+          <div className="ingredients-list">
+            {detected_foods.map((food, index) => (
+              <div key={food.id || index} className="ingredient-item">
+                <div className="ingredient-header">
+                  <div className="ingredient-info">
+                    {editingFood === (food.id || index) ? (
+                      <div className="edit-form">
+                        <input
+                          type="text"
+                          value={editValues.name}
+                          onChange={(e) => setEditValues({...editValues, name: e.target.value})}
+                          className="food-name-input"
+                        />
+                        <div className="portion-inputs">
+                          <input
+                            type="number"
+                            value={editValues.estimated_portion}
+                            onChange={(e) => setEditValues({...editValues, estimated_portion: parseFloat(e.target.value)})}
+                            className="portion-input"
+                          />
+                          <select
+                            value={editValues.portion_unit}
+                            onChange={(e) => setEditValues({...editValues, portion_unit: e.target.value})}
+                            className="unit-select"
+                          >
+                            <option value="grams">grams</option>
+                            <option value="cups">cups</option>
+                            <option value="pieces">pieces</option>
+                            <option value="slices">slices</option>
+                            <option value="tablespoons">tablespoons</option>
+                          </select>
+                        </div>
+                        <div className="edit-actions">
+                          <button onClick={() => handleSaveEdit(food.id || index)} className="save-btn">
+                            ✓ Save
+                          </button>
+                          <button onClick={handleCancelEdit} className="cancel-btn">
+                            ✕ Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="ingredient-display">
+                        <h4 className="ingredient-name">{food.name}</h4>
+                        <p className="ingredient-portion">
+                          {food.estimated_portion || food.portion} {food.portion_unit || food.unit}
+                          {food.category && <span className="ingredient-category"> • {food.category}</span>}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="ingredient-confidence">
+                    <span 
+                      className="confidence-badge"
+                      style={{ backgroundColor: getConfidenceColor(food.confidence) }}
+                    >
+                      {Math.round(food.confidence * 100)}%
+                    </span>
+                  </div>
+
+                  {!isEditing && editingFood !== (food.id || index) && (
+                    <div className="ingredient-actions">
+                      <button onClick={() => handleEditClick(food)} className="edit-btn">
+                        ✏️
+                      </button>
+                      <button onClick={() => onRemoveFood(food.id || index)} className="remove-btn">
+                        🗑️
+                      </button>
                     </div>
-                    <div className="edit-actions">
-                      <button onClick={() => handleSaveEdit(food.id || index)} className="save-btn">
-                        ✓ Save
-                      </button>
-                      <button onClick={handleCancelEdit} className="cancel-btn">
-                        ✕ Cancel
-                      </button>
+                  )}
+                </div>
+
+                {food.nutrition && (
+                  <div className="ingredient-nutrition">
+                    <div className="nutrition-grid">
+                      <div className="nutrition-item">
+                        <span className="nutrition-label">Calories</span>
+                        <span className="nutrition-value">{Math.round(food.nutrition.calories || 0)}</span>
+                      </div>
+                      <div className="nutrition-item">
+                        <span className="nutrition-label">Protein</span>
+                        <span className="nutrition-value">{(food.nutrition.protein || 0).toFixed(1)}g</span>
+                      </div>
+                      <div className="nutrition-item">
+                        <span className="nutrition-label">Carbs</span>
+                        <span className="nutrition-value">{(food.nutrition.carbs || 0).toFixed(1)}g</span>
+                      </div>
+                      <div className="nutrition-item">
+                        <span className="nutrition-label">Fat</span>
+                        <span className="nutrition-value">{(food.nutrition.fat || 0).toFixed(1)}g</span>
+                      </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="food-display">
-                    <h4 className="food-name">{food.name}</h4>
-                    <p className="food-portion">
-                      {food.estimated_portion || food.portion} {food.portion_unit || food.unit}
-                      {food.category && <span className="food-category"> • {food.category}</span>}
-                    </p>
+                )}
+
+                {food.notes && (
+                  <div className="ingredient-notes">
+                    <small>{food.notes}</small>
                   </div>
                 )}
               </div>
-
-              <div className="food-confidence">
-                <span 
-                  className="confidence-badge"
-                  style={{ backgroundColor: getConfidenceColor(food.confidence) }}
-                >
-                  {Math.round(food.confidence * 100)}%
-                </span>
-              </div>
-
-              {!isEditing && editingFood !== (food.id || index) && (
-                <div className="food-actions">
-                  <button onClick={() => handleEditClick(food)} className="edit-btn">
-                    ✏️
-                  </button>
-                  <button onClick={() => onRemoveFood(food.id || index)} className="remove-btn">
-                    🗑️
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {food.nutrition && (
-              <div className="nutrition-info">
-                <div className="nutrition-grid">
-                  <div className="nutrition-item">
-                    <span className="nutrition-label">Calories</span>
-                    <span className="nutrition-value">{Math.round(food.nutrition.calories || 0)}</span>
-                  </div>
-                  <div className="nutrition-item">
-                    <span className="nutrition-label">Protein</span>
-                    <span className="nutrition-value">{(food.nutrition.protein || 0).toFixed(1)}g</span>
-                  </div>
-                  <div className="nutrition-item">
-                    <span className="nutrition-label">Carbs</span>
-                    <span className="nutrition-value">{(food.nutrition.carbs || 0).toFixed(1)}g</span>
-                  </div>
-                  <div className="nutrition-item">
-                    <span className="nutrition-label">Fat</span>
-                    <span className="nutrition-value">{(food.nutrition.fat || 0).toFixed(1)}g</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {food.notes && (
-              <div className="food-notes">
-                <small>{food.notes}</small>
-              </div>
-            )}
+            ))}
           </div>
-        ))}
+        </div>
       </div>
 
-      <div className="nutrition-summary">
-        <h3>📊 Total Nutrition</h3>
+      {/* Total Nutrition Summary - Dark Green Background */}
+      <div className="nutrition-summary dark-green">
+        <h3>📊 Total Nutrition Summary</h3>
         <div className="summary-grid">
           <div className="summary-item calories">
             <div className="summary-icon">🔥</div>
@@ -247,7 +302,6 @@ const FoodAnalysisResult = ({
           </div>
         </div>
       </div>
-
 
       {confidence_overall < 0.7 && (
         <div className="low-confidence-warning">

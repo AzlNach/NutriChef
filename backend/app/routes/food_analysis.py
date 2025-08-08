@@ -557,9 +557,9 @@ def get_analysis_result(session_id):
         
         cursor = conn.cursor(dictionary=True)
         
-        # Get session details
+        # Get session details - Include main_food_id to match direct analysis
         cursor.execute("""
-            SELECT fas.*, f.name as main_food_name, f.description as main_food_description
+            SELECT fas.*, f.id as main_food_id, f.name as main_food_name, f.description as main_food_description
             FROM food_analysis_sessions fas
             LEFT JOIN detected_ingredients di ON fas.id = di.session_id
             LEFT JOIN foods f ON di.food_id = f.id
@@ -595,11 +595,12 @@ def get_analysis_result(session_id):
         cursor.close()
         conn.close()
         
-        # Format detected foods
+        # Format detected foods - MATCH structure with direct analysis
         detected_foods = []
         for ingredient in ingredients:
             detected_foods.append({
                 'id': ingredient['id'],
+                'food_id': ingredient['food_id'],  # ⭐ ADD food_id to match direct analysis
                 'name': ingredient['ingredient_name'],
                 'category': ingredient['ingredient_category'],
                 'portion': float(ingredient['estimated_portion']) if ingredient['estimated_portion'] else 0,
@@ -613,7 +614,8 @@ def get_analysis_result(session_id):
                     'fiber': float(ingredient['fiber']) if ingredient['fiber'] else 0,
                     'sugar': float(ingredient['sugar']) if ingredient['sugar'] else 0,
                     'sodium': float(ingredient['sodium']) if ingredient['sodium'] else 0
-                }
+                },
+                'data_source': 'USDA'  # ⭐ ADD data_source to match direct analysis
             })
         
         # Calculate total nutrition
@@ -627,17 +629,19 @@ def get_analysis_result(session_id):
             'sodium': sum(food['nutrition']['sodium'] for food in detected_foods)
         }
         
-        # Format response
+        # Format response - MATCH structure with direct analysis
         analysis_result = {
             'session_id': session_id,
             'status': session_data['analysis_status'],
             'main_food': {
+                'id': session_data['main_food_id'],  # ⭐ ADD id to match direct analysis
                 'name': session_data['main_food_name'] or 'Unknown Dish',
                 'description': session_data['main_food_description'] or 'No description available',
                 'confidence': float(session_data['confidence_score']) if session_data['confidence_score'] else 0
             },
             'detected_foods': detected_foods,
             'total_nutrition': total_nutrition,
+            'confidence': float(session_data['confidence_score']) if session_data['confidence_score'] else 0,  # ⭐ ADD confidence to match direct analysis
             'confidence_overall': float(session_data['confidence_score']) if session_data['confidence_score'] else 0,
             'image_filename': session_data['image_filename'],
             'total_estimated_calories': float(session_data['total_estimated_calories']) if session_data['total_estimated_calories'] else 0,

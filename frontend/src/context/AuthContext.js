@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { storage } from '../utils/helpers';
+import { API_CONFIG } from '../utils/constants';
 
 // Auth context
 const AuthContext = createContext();
@@ -58,22 +59,76 @@ const initialState = {
   error: null
 };
 
+// Helper function to check server connectivity
+const checkServerConnectivity = async (token) => {
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/auth/verify`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    return response.ok;
+  } catch (error) {
+    return false;
+  }
+};
+
 // Auth Provider
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   // Check for existing auth on mount
   useEffect(() => {
-    const token = storage.get('token');
-    const user = storage.get('user');
-    
-    if (token && user) {
-      dispatch({
-        type: AUTH_ACTIONS.LOGIN,
-        payload: { token, user }
-      });
+    try {
+      const token = localStorage.getItem('token'); // JWT tokens are strings, not JSON
+      const user = storage.get('user'); // User data is JSON
+      
+      if (token && user) {
+        // Verify token with server
+        checkServerConnectivity(token).then(isValid => {
+          if (isValid) {
+            dispatch({
+              type: AUTH_ACTIONS.LOGIN,
+              payload: { token, user }
+            });
+          } else {
+            // Server is down or token is invalid, logout
+            logout();
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error loading auth data from localStorage:', error);
+      // Clear corrupted localStorage data
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
     }
   }, []);
+
+  // Periodic server check for authenticated users
+  useEffect(() => {
+    let intervalId;
+
+    if (state.isAuthenticated && state.token) {
+      intervalId = setInterval(async () => {
+        const isServerUp = await checkServerConnectivity(state.token);
+        if (!isServerUp) {
+          dispatch({
+            type: AUTH_ACTIONS.SET_ERROR,
+            payload: 'Server connection lost. You have been logged out.'
+          });
+          logout();
+        }
+      }, 30000); // Check every 30 seconds
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [state.isAuthenticated, state.token]);
 
   // Auth actions
   const login = (token, user) => {
@@ -107,12 +162,23 @@ export const AuthProvider = ({ children }) => {
     });
   };
 
+  // Verify current token
+  const verifyToken = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      return false;
+    }
+    
+    return await checkServerConnectivity(token);
+  };
+
   const value = {
     ...state,
     login,
     logout,
     setLoading,
-    setError
+    setError,
+    verifyToken
   };
 
   return (

@@ -127,7 +127,47 @@ def get_dashboard_stats():
         
         cursor = conn.cursor(dictionary=True)
         
-        # Get last 30 days nutrition data
+        # Get total analysis sessions (Total Analysis)
+        cursor.execute("""
+            SELECT COUNT(*) as total_analyses
+            FROM food_analysis_sessions 
+            WHERE user_id = %s AND analysis_status = 'completed'
+        """, (user_id,))
+        total_analyses_result = cursor.fetchone()
+        total_analyses = total_analyses_result['total_analyses'] if total_analyses_result else 0
+        
+        # Get total calories (instead of average)
+        cursor.execute("""
+            SELECT SUM(total_calories) as total_calories
+            FROM daily_nutrition_summary 
+            WHERE user_id = %s
+        """, (user_id,))
+        total_calories_result = cursor.fetchone()
+        total_calories = total_calories_result['total_calories'] if total_calories_result and total_calories_result['total_calories'] else 0
+        
+        # Get average calories per day for reference
+        cursor.execute("""
+            SELECT AVG(total_calories) as avg_calories_per_day
+            FROM daily_nutrition_summary 
+            WHERE user_id = %s AND total_calories > 0
+        """, (user_id,))
+        avg_calories_result = cursor.fetchone()
+        avg_calories_per_day = avg_calories_result['avg_calories_per_day'] if avg_calories_result and avg_calories_result['avg_calories_per_day'] else 0
+        
+        # Get last analysis date (Last Analysis)
+        cursor.execute("""
+            SELECT created_at
+            FROM food_analysis_sessions 
+            WHERE user_id = %s AND analysis_status = 'completed'
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (user_id,))
+        last_analysis_result = cursor.fetchone()
+        last_analysis_time = None
+        if last_analysis_result and last_analysis_result['created_at']:
+            last_analysis_time = last_analysis_result['created_at'].strftime('%Y-%m-%d %H:%M')
+        
+        # Get last 30 days nutrition data for history
         thirty_days_ago = datetime.now().date() - timedelta(days=30)
         cursor.execute("""
             SELECT date, total_calories, total_protein, total_carbs, total_fat
@@ -136,15 +176,6 @@ def get_dashboard_stats():
             ORDER BY date
         """, (user_id, thirty_days_ago))
         nutrition_history = cursor.fetchall()
-        
-        # Get total analysis sessions
-        cursor.execute("""
-            SELECT COUNT(*) as total_sessions,
-                   SUM(CASE WHEN analysis_status = 'completed' THEN 1 ELSE 0 END) as completed_sessions
-            FROM food_analysis_sessions 
-            WHERE user_id = %s
-        """, (user_id,))
-        session_stats = cursor.fetchone()
         
         # Get most analyzed ingredients
         cursor.execute("""
@@ -167,8 +198,11 @@ def get_dashboard_stats():
                 entry['date'] = entry['date'].isoformat()
         
         return jsonify({
+            'total_analyses': total_analyses,
+            'total_calories': float(total_calories),
+            'avg_calories_per_day': float(avg_calories_per_day),
+            'last_analysis_time': last_analysis_time,
             'nutrition_history': nutrition_history,
-            'session_stats': session_stats,
             'top_foods': top_foods
         }), 200
         

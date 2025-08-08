@@ -54,6 +54,21 @@ export const nutritionService = {
         } catch (error) {
             throw new Error((error.response && error.response.data && error.response.data.error) || 'Failed to update nutrition goals');
         }
+    },
+
+    // Get ingredient count for a specific date by querying all sessions for that day
+    getIngredientCountByDate: async(date) => {
+        try {
+            console.log(`🌐 API call: /nutrition/ingredients-count/${date}`);
+            const response = await api.get(`/nutrition/ingredients-count/${date}`);
+            console.log(`📨 API response for ${date}:`, response.data);
+            return response.data;
+        } catch (error) {
+            // If endpoint doesn't exist or fails, return fallback
+            console.error(`❌ API error for ${date}:`, error.response?.data || error.message);
+            console.warn('Ingredient count endpoint not available:', error.message);
+            return { count: 1 };
+        }
     }
 };
 
