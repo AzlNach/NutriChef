@@ -109,11 +109,18 @@ const ModernAuth = ({ onLogin, onClose, setError }) => {
         const data = await response.json();
 
         if (!response.ok) {
+          if (response.status === 409) {
+            throw new Error('User already exists. Please try logging in instead.');
+          }
           throw new Error(data.error || 'Registration failed');
         }
 
-        // Auto login after successful registration
-        await onLogin(data.access_token, data.user);
+        // Store token and user data directly instead of calling onLogin
+        localStorage.setItem('token', data.access_token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Call onLogin with email and password to properly authenticate
+        await onLogin(formData.email, formData.password);
       }
     } catch (error) {
       setError(error.message || 'Authentication failed');

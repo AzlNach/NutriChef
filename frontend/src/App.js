@@ -62,13 +62,15 @@ function AppContent() {
                 if (!urlParams.get('session_expired')) {
                     setCurrentView('dashboard');
                     
-                    // Preload dashboard data after authentication check
-                    setTimeout(() => {
-                        loadDashboardData().catch(error => {
+                    // Preload dashboard data after authentication check (with longer delay)
+                    setTimeout(async () => {
+                        try {
+                            await loadDashboardData();
+                        } catch (error) {
                             console.warn('Failed to preload dashboard data:', error);
                             // Don't logout on dashboard load failure, just show warning
-                        });
-                    }, 100); // Small delay to ensure state is set
+                        }
+                    }, 2000); // Longer delay to ensure token verification is ready
                 }
             } catch (error) {
                 console.error('❌ Failed to parse user data, clearing auth:', error);
@@ -90,12 +92,14 @@ function AppContent() {
 
     const loadDashboardData = async() => {
         try {
-            // Verify token before making API calls
-            const isTokenValid = await verifyToken();
-            if (!isTokenValid) {
-                console.warn('⚠️ Token verification failed, redirecting to login');
-                handleLogout();
-                return;
+            // Skip token verification if we're already authenticated to avoid loop
+            if (!isAuthenticated) {
+                const isTokenValid = await verifyToken();
+                if (!isTokenValid) {
+                    console.warn('⚠️ Token verification failed, redirecting to login');
+                    handleLogout();
+                    return;
+                }
             }
             
             setIsLoading(true);
@@ -429,12 +433,14 @@ function AppContent() {
             setShowAuthPage(false);
             setCurrentView('dashboard'); // Redirect to dashboard after login
             
-            // Preload dashboard data after successful login
-            try {
-                await loadDashboardData();
-            } catch (error) {
-                console.warn('Failed to preload dashboard data:', error);
-            }
+            // Preload dashboard data after successful login (with delay to prevent immediate logout)
+            setTimeout(async () => {
+                try {
+                    await loadDashboardData();
+                } catch (error) {
+                    console.warn('Failed to preload dashboard data:', error);
+                }
+            }, 1000);
             
             showErrorMessage(`Welcome back, ${userData.username || userData.full_name}!`, 'info');
         } catch (error) {

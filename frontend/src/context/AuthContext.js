@@ -62,7 +62,7 @@ const initialState = {
 // Helper function to check server connectivity
 const checkServerConnectivity = async (token) => {
   try {
-    const response = await fetch(`${API_CONFIG.BASE_URL}/auth/verify`, {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/auth/verify`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -70,6 +70,7 @@ const checkServerConnectivity = async (token) => {
     });
     return response.ok;
   } catch (error) {
+    console.error('Token verification error:', error);
     return false;
   }
 };
