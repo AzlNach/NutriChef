@@ -9,9 +9,17 @@ import functools
 def setup_cors(app):
     """Setup comprehensive CORS configuration"""
     
-    # Basic CORS setup
+    # Basic CORS setup - Updated for production
+    allowed_origins = [
+        'http://localhost:3000', 
+        'http://127.0.0.1:3000',
+        'https://nutrichef-app.netlify.app',
+        'https://main--nutrichef-app.netlify.app',  # branch deploys
+        'https://deploy-preview-*--nutrichef-app.netlify.app'  # PR previews
+    ]
+    
     CORS(app, 
-         origins=['http://localhost:3000', 'http://127.0.0.1:3000'],
+         origins=allowed_origins,
          allow_headers=[
              'Content-Type', 
              'Authorization', 
@@ -27,7 +35,12 @@ def setup_cors(app):
     def after_request(response):
         """Add CORS headers to all responses"""
         origin = request.headers.get('Origin')
-        if origin in ['http://localhost:3000', 'http://127.0.0.1:3000']:
+        
+        # Check if origin is in allowed list or matches Netlify pattern
+        if origin and (origin in allowed_origins or 
+                      'nutrichef-app.netlify.app' in origin or
+                      origin.startswith('http://localhost:') or
+                      origin.startswith('http://127.0.0.1:')):
             response.headers.add('Access-Control-Allow-Origin', origin)
         else:
             response.headers.add('Access-Control-Allow-Origin', '*')
@@ -50,7 +63,11 @@ def setup_cors(app):
 def cors_enabled(f):
     """Decorator to enable CORS for specific routes"""
     @functools.wraps(f)
-    @cross_origin(origins=['http://localhost:3000'])
+    @cross_origin(origins=[
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'https://nutrichef-app.netlify.app'
+    ])
     def decorated_function(*args, **kwargs):
         return f(*args, **kwargs)
     return decorated_function

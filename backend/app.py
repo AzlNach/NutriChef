@@ -48,9 +48,16 @@ def create_app(config_name='development'):
     # Initialize JWT with app
     jwt.init_app(app)
     
-    # CORS configuration - Allow all origins for development
+    # CORS configuration - Dynamic origins based on environment
+    frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+    allowed_origins = [
+        'http://localhost:3000', 
+        'http://127.0.0.1:3000',
+        frontend_url
+    ]
+    
     CORS(app, 
-         origins=['http://localhost:3000', 'http://127.0.0.1:3000'],
+         origins=allowed_origins,
          allow_headers=['Content-Type', 'Authorization'],
          methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
          supports_credentials=True)
