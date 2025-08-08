@@ -475,7 +475,7 @@ function AppContent() {
                                     <circle cx="12" cy="12" r="10" />
                                     <circle cx="12" cy="12" r="3" fill="white" />
                                 </svg>
-                                <span className="text-lg font-bold">FoodVision</span>
+                                <span className="text-lg font-bold">NutriChef</span>
                             </button>
                         </div>
 

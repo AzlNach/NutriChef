@@ -1,4 +1,4 @@
-# FoodVision API Prompts & Integration Guide
+# NutriChef API Prompts & Integration Guide
 
 ## 1. Gemini API Prompts
 

@@ -1,4 +1,4 @@
-# FoodVision REST API Documentation
+# NutriChef REST API Documentation
 
 ## Base URL
 - Development: `http://localhost:5000/api`

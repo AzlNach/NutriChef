@@ -1,7 +1,7 @@
-# FoodVision - AI-Powered Diet Tracking System
+# NutriChef - AI-Powered Diet Tracking System
 
 ## Overview
-FoodVision adalah aplikasi web yang memungkinkan user untuk tracking diet mereka dengan menganalisis gambar makanan menggunakan AI. Sistem ini menggunakan Gemini API untuk identifikasi makanan dan USDA FoodData Central untuk data nutrisi.
+NutriChef adalah aplikasi web yang memungkinkan user untuk tracking diet mereka dengan menganalisis gambar makanan menggunakan AI. Sistem ini menggunakan Gemini API untuk identifikasi makanan dan USDA FoodData Central untuk data nutrisi.
 
 ## Tech Stack
 - **Backend**: Python (Flask/FastAPI)
@@ -31,13 +31,13 @@ Frontend (React) → Backend API (Python) → Database (MySQL)
 ### Quick Start
 ```powershell
 # 1. Clone atau extract project ke folder Laragon
-cd C:\Azel\laragon\www\FoodVision
+cd C:\Azel\laragon\www\NutriChef
 
 # 2. Run setup script
 .\setup.ps1
 
 # 3. Import database
-mysql -u root -p foodvision_db < database/schema.sql
+mysql -u root -p NutriChef_db < database/schema.sql
 
 # 4. Configure API keys in backend/.env
 # 5. Start development servers
@@ -71,7 +71,7 @@ Lihat `PROJECT_STRUCTURE.md` untuk detail lengkap struktur project.
 - **Database**: MySQL dengan comprehensive nutrition tracking schema
 - **Deployment**: ngrok untuk development, scalable untuk production
 
-# Database Structure Update - FoodVision
+# Database Structure Update - NutriChef
 
 ## ✅ Perubahan yang Telah Dilakukan
 
@@ -225,10 +225,10 @@ Struktur database sudah berhasil diubah sesuai dengan requirement:
 - ⚠️ Backend services perlu diupdate untuk menggunakan struktur baru
 
 
-# FoodVision Project Structure
+# NutriChef Project Structure
 
 ```
-FoodVision/
+NutriChef/
 ├── backend/                          # Python Backend (Flask/FastAPI)
 │   ├── app/
 │   │   ├── __init__.py

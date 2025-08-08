@@ -291,7 +291,7 @@ function App() {
                                     <circle cx="12" cy="12" r="10" />
                                     <circle cx="12" cy="12" r="3" fill="white" />
                                 </svg>
-                                <span className="text-xl font-bold">FoodVision</span>
+                                <span className="text-xl font-bold">NutriChef</span>
                             </button>
                         </div>
 
@@ -863,7 +863,7 @@ export default App;
                 <div className="header-container">
                     <div className="logo-section">
                         <div className="logo-icon">🍽️</div>
-                        <h1 className="app-title">FoodVision</h1>
+                        <h1 className="app-title">NutriChef</h1>
                         <span className="app-subtitle">AI-Powered Diet Tracking</span>
                     </div>
 
@@ -971,7 +971,7 @@ export default App;
 
                             {/* Features Section */}
                             <div className="features-section">
-                                <h3 className="features-title">Why Choose FoodVision?</h3>
+                                <h3 className="features-title">Why Choose NutriChef?</h3>
                                 <div className="features-grid">
                                     <div className="feature-card">
                                         <div className="feature-icon">🔍</div>
@@ -1094,7 +1094,7 @@ export default App;
                         <div className="auth-view">
                             <div className="auth-card">
                                 <h2 className="auth-title">Create Account</h2>
-                                <p className="auth-subtitle">Join FoodVision today</p>
+                                <p className="auth-subtitle">Join NutriChef today</p>
 
                                 <form 
                                     className="auth-form"
@@ -1732,7 +1732,7 @@ export default App;
             <footer className="app-footer">
                 <div className="footer-container">
                     <div className="footer-section">
-                        <h4>FoodVision</h4>
+                        <h4>NutriChef</h4>
                         <p>AI-powered nutrition tracking for a healthier lifestyle.</p>
                     </div>
                     <div className="footer-section">
@@ -1753,7 +1753,7 @@ export default App;
                     </div>
                 </div>
                 <div className="footer-bottom">
-                    <p>&copy; 2025 FoodVision. All rights reserved.</p>
+                    <p>&copy; 2025 NutriChef. All rights reserved.</p>
                 </div>
             </footer>
 

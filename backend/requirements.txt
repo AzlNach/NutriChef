@@ -1,4 +1,4 @@
-# FoodVision Backend Dependencies
+# NutriChef Backend Dependencies
 # Python 3.9+
 
 # Web Framework

@@ -71,7 +71,7 @@ const Layout = ({ children }) => {
                 <circle cx="12" cy="12" r="3" fill="white" />
               </svg>
               <div className="brand-text">
-                <h1 className="brand-title">FoodVision</h1>
+                <h1 className="brand-title">NutriChef</h1>
                 <span className="brand-subtitle">AI-Powered Nutrition Analysis</span>
               </div>
             </button>
@@ -215,7 +215,7 @@ const Layout = ({ children }) => {
                 <circle cx="12" cy="12" r="3" fill="white" />
               </svg>
               <div className="footer-text">
-                <h3 className="footer-title">FoodVision</h3>
+                <h3 className="footer-title">NutriChef</h3>
                 <p className="footer-tagline">AI-Powered Nutrition Analysis</p>
               </div>
             </div>
@@ -247,7 +247,7 @@ const Layout = ({ children }) => {
             </div>
           </div>
           <div className="footer-bottom">
-            <p>&copy; 2025 FoodVision. All rights reserved.</p>
+            <p>&copy; 2025 NutriChef. All rights reserved.</p>
             <div className="footer-meta">
               <span>Version 1.0.0</span>
               <span>•</span>

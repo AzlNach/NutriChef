@@ -1,6 +1,11 @@
 import React, { useEffect } from 'react';
+import EnhancedImageUpload from '../components/food/EnhancedImageUpload';
 
 const HomePage = ({ 
+  onImageUpload, 
+  onAnalyze, 
+  isAnalyzing, 
+  analysisResult, 
   onLoginRequired, 
   isAuthenticated 
 }) => {
@@ -8,7 +13,6 @@ const HomePage = ({
     const navbar = document.getElementById('navbar');
     const navLinks = document.querySelectorAll('.nav-link');
     const logoText = document.getElementById('logo-text');
-    const welcomeText = document.getElementById('welcome-text');
 
     // Fungsi untuk mengubah gaya navbar
     function changeNavbarStyle() {
@@ -34,12 +38,6 @@ const HomePage = ({
           logoText.classList.remove('text-white');
           logoText.classList.add('text-black');
         }
-        
-        if (welcomeText) {
-          welcomeText.classList.remove('text-white');
-          welcomeText.classList.add('text-black');
-        }
-        
         navLinks.forEach(link => {
           link.classList.remove('text-white');
           link.classList.add('text-black');
@@ -58,12 +56,6 @@ const HomePage = ({
           logoText.classList.remove('text-black');
           logoText.classList.add('text-white');
         }
-        
-        if (welcomeText) {
-          welcomeText.classList.remove('text-black');
-          welcomeText.classList.add('text-white');
-        }
-        
         navLinks.forEach(link => {
           link.classList.remove('text-black');
           link.classList.add('text-white');
@@ -116,24 +108,43 @@ const HomePage = ({
           </div>
           <div className="hidden md:flex items-center space-x-6 text-xs text-gray-300 ml-8">
             <button 
+              onClick={() => scrollToSection('analyze-section')} 
+              className="nav-link hover:text-white transition-colors text-white"
+            >
+              Analyze
+            </button>
+            <button 
               onClick={() => scrollToSection('features-section')} 
-              className="nav-link transition-colors text-white"
+              className="nav-link hover:text-white transition-colors text-white"
             >
               Features
             </button>
             <button 
               onClick={() => scrollToSection('testimonials')} 
-              className="nav-link transition-colors text-white"
+              className="nav-link hover:text-white transition-colors text-white"
             >
               Reviews
             </button>
-            
-            <button 
+          </div>
+          <div className="flex items-center space-x-3 ml-8">
+            {!isAuthenticated ? (
+              <>
+                <button 
                   onClick={onLoginRequired}
-                  className="nav-link transition-colors text-white"
+                  className="hidden md:inline-block text-xs font-medium hover:text-white transition-colors text-white"
                 >
                   Login
-              </button>
+                </button>
+                <button 
+                  onClick={onLoginRequired}
+                  className="hover:bg-gray-200 transition-colors text-xs font-medium text-black bg-white rounded-full py-1.5 px-3"
+                >
+                  Start Project
+                </button>
+              </>
+            ) : (
+              <span className="text-white text-xs">Welcome back!</span>
+            )}
           </div>
         </div>
       </nav>
@@ -157,7 +168,7 @@ const HomePage = ({
         
         <div className="mt-12 flex flex-col sm:flex-row gap-4">
           <button 
-            onClick={onLoginRequired}
+            onClick={() => document.getElementById('analyze-section')?.scrollIntoView({ behavior: 'smooth' })}
             className="px-8 py-3 bg-white text-black font-medium rounded-full hover:bg-gray-200 transition-all duration-300 shadow-lg hover:shadow-xl"
           >
             Analyze Your Food
@@ -174,6 +185,31 @@ const HomePage = ({
       {/* Main Content Section - White Background */}
       <div className="relative z-10 bg-white">
         
+        {/* Upload/Analysis Section */}
+        <section id="analyze-section" className="py-20">
+          <div className="max-w-4xl mx-auto px-6">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+                Upload Your Food Photo
+              </h2>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                Get instant nutritional analysis by uploading a photo of your meal. 
+                Our AI will identify ingredients and provide detailed nutrition information.
+              </p>
+            </div>
+
+            <div className="bg-gray-50 rounded-3xl p-8 shadow-lg">
+              <EnhancedImageUpload
+                onImageUpload={onImageUpload}
+                onAnalyze={onAnalyze}
+                isAnalyzing={isAnalyzing}
+                analysisResult={analysisResult}
+                onLoginRequired={onLoginRequired}
+              />
+            </div>
+          </div>
+        </section>
+
         {/* Features Grid Section */}
         <section id="features-section" className="py-20 bg-gray-50">
           <div className="max-w-7xl mx-auto px-6">

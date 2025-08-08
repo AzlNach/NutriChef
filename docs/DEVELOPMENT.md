@@ -1,7 +1,7 @@
-# FoodVision - Development Guide
+# NutriChef - Development Guide
 
 ## Project Overview
-FoodVision adalah sistem tracking diet berbasis AI yang menggunakan:
+NutriChef adalah sistem tracking diet berbasis AI yang menggunakan:
 - **Backend**: Python Flask dengan Gemini API untuk analisis gambar
 - **Frontend**: React.js untuk interface pengguna
 - **Database**: MySQL untuk penyimpanan data
@@ -35,12 +35,12 @@ FoodVision adalah sistem tracking diet berbasis AI yang menggunakan:
 Jika perlu mengubah database schema:
 ```sql
 -- 1. Backup existing data
-mysqldump -u root -p foodvision_db > backup_$(date +%Y%m%d).sql
+mysqldump -u root -p NutriChef_db > backup_$(date +%Y%m%d).sql
 
 -- 2. Make changes to database/schema.sql
 
 -- 3. Apply changes
-mysql -u root -p foodvision_db < database/schema.sql
+mysql -u root -p NutriChef_db < database/schema.sql
 ```
 
 #### Sample Data
@@ -273,7 +273,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('logs/foodvision.log'),
+        logging.FileHandler('logs/NutriChef.log'),
         logging.StreamHandler()
     ]
 )

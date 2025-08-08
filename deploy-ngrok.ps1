@@ -1,6 +1,6 @@
-# ngrok Setup and Deployment Script untuk FoodVision
+# ngrok Setup and Deployment Script untuk NutriChef
 
-Write-Host "=== FoodVision ngrok Setup & Deployment ===" -ForegroundColor Green
+Write-Host "=== NutriChef ngrok Setup & Deployment ===" -ForegroundColor Green
 
 # Check if ngrok is installed
 try {
